@@ -174,3 +174,46 @@ Runner, Lane Racer, Rhythm Tiles and Block Drop. Use only original procedural
 visuals/audio and generic mechanics: no ROMs or copied Mario/Tetris branding,
 characters, artwork or music. Scores/progress live only in their open tab.
 Game logic belongs in pure Kotlin `games/`; native screens in `ui/games/`.
+
+## 11. v1.2.0-rc.1 — professional quality candidate
+
+This section supersedes conflicting v1.1 shell and library details. VersionCode
+is 3; identity, signing key, SDK range, dependency set and permissions stay
+unchanged. This is a prerelease, not a declaration that all physical-device,
+human accessibility or design-approval gates have passed. Stable remains
+v1.1.0; the updater's `/releases/latest` endpoint excludes prereleases.
+
+- Use Tools / Media / Games / Settings as primary destinations, with a compact
+  bottom bar and expanded navigation rail. Search recognizes common aliases.
+- A dedicated workspace controller owns six unique RAM-only sessions.
+  Compact screens use a workspace overview instead of a permanent second
+  navigation strip; expanded screens retain direct tab controls.
+- Closing tabs with reported work or active playback requires confirmation.
+  Confirming destroys the session immediately; there is no undo copy or
+  restored workspace after process death. Closing an untouched tab needs no
+  confirmation. The overview also supports confirmed close-all.
+- Fullscreen and regular playback controls use the same desired-play state.
+  Position polling runs only for visible, foreground, playing sessions.
+  Music separates Library / Now playing / Queue.
+- Media and document scans emit progressive, cancellable batches and cache
+  completed indexes in RAM for the lifetime of the open tool. Rescan, provider
+  notifications and permission-scope changes invalidate the index. Unchanged
+  activity resume must not trigger another complete scan. Search and sorting
+  run away from the main thread; denied, partial, empty and error states differ.
+- A stopped WebView renderer disables old-view commands and offers a new
+  replacement tab. Private Browser and YouTube retain their BETA warnings.
+- Numeric tools accept strict localized numbers, Unicode digits and valid
+  Western/Indian grouping. Calculator decimal keys/results are localized.
+  Network formats remain locale-neutral. The UI itself remains English.
+- Game boards use actual pane constraints; short landscape can place controls
+  beside the board. Primary actions remain visible, rules pause real-time
+  play, and card boards scroll within their region. Rhythm Tiles adds semantic
+  controls, keyboard 1-4 and untimed practice. Original procedural tones use
+  transient audio focus.
+- Shared layout tokens, tabular numerical readouts and common recovery states
+  support consistent presentation. Manual issue reporting opens GitHub and
+  never attaches tool data or diagnostics automatically.
+- Unsigned CI runs unit tests, lint, builds and API 35 device checks; permanent
+  release signing remains local. See [QUALITY.md](QUALITY.md) for the complete
+  34-entry verification map, master-screen evidence and outstanding acceptance
+  gates. Publish the signed candidate separately from latest stable.

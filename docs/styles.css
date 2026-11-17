@@ -85,6 +85,12 @@ h3{font-weight:550;font-size:17px;letter-spacing:-.2px;margin:0 0 11px}
 .tool-card p{font-size:12px;color:var(--muted);line-height:1.85;margin:0}
 .beta-chip{font:8px Consolas,monospace;color:var(--amber);border:1px solid #8a6413;border-radius:4px;padding:3px 4px;vertical-align:middle;margin-left:4px;letter-spacing:.5px;white-space:nowrap}
 .section-footnote{font-size:11px;line-height:1.9;color:#92928b;margin:24px 0 0}
+.quality-copy{max-width:760px;color:var(--muted);font-size:14px;line-height:1.9}
+.screenshot-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-block:32px}
+.screenshot-grid figure{margin:0;min-width:0}
+.screenshot-grid img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:20px;background:var(--panel)}
+.screenshot-grid figcaption{padding:14px 0;color:var(--muted);font-size:13px}
+@media(max-width:760px){.screenshot-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.screenshot-grid img{border-radius:12px}.quality-copy{font-size:13px}}
 .principles-section{background:#0b0b0b;border-block:1px solid var(--line)}
 .muted{color:#777770}
 .principles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:42px;padding-top:20px}

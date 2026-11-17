@@ -36,6 +36,7 @@ import app.sadhan.media.PdfDocument
 import app.sadhan.media.documentName
 import app.sadhan.ui.ErrorText
 import app.sadhan.ui.DocumentLibrary
+import app.sadhan.ui.rememberDocumentIndex
 import app.sadhan.data.SettingsStore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
@@ -59,6 +60,7 @@ fun PdfReaderScreen(store: SettingsStore) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var library by remember { mutableStateOf(false) }
+    val documentIndex = rememberDocumentIndex(store.value.documentFolder, library)
     fun display(index: Int) {
         val current = document ?: return
         scope.launch {
@@ -118,7 +120,7 @@ fun PdfReaderScreen(store: SettingsStore) {
             }
             if (library) AlertDialog(
                 onDismissRequest = { library = false }, title = { Text("Your documents") },
-                text = { Column(Modifier.verticalScroll(rememberScrollState())) { DocumentLibrary(store) { library = false; open(it) } } },
+                text = { Column(Modifier.verticalScroll(rememberScrollState())) { DocumentLibrary(store, documentIndex) { library = false; open(it) } } },
                 confirmButton = { TextButton(onClick = { library = false }) { Text("Done") } },
             )
         }

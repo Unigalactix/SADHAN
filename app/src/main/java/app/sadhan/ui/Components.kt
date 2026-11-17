@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -47,12 +48,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import app.sadhan.ui.theme.SadhanLayout
+
+val LocalSettingsAction = staticCompositionLocalOf<(() -> Unit)?> { null }
 
 @Composable
 fun ToolColumn(content: @Composable ColumnScope.() -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
-            Modifier.widthIn(max = 760.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
+            Modifier.widthIn(max = SadhanLayout.contentWidth).fillMaxWidth().verticalScroll(rememberScrollState()).padding(SadhanLayout.pagePadding),
             verticalArrangement = Arrangement.spacedBy(20.dp),
             content = content,
         )
@@ -98,7 +102,7 @@ fun ResultCard(label: String, value: String) {
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+            Text(value, style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"), color = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -120,7 +124,11 @@ fun BetaChip() {
 
 @Composable
 fun InternetGate(enabled: Boolean, content: @Composable () -> Unit) {
-    if (enabled) content() else ToolColumn { ResultCard("Internet feature", "Turned off in Settings") }
+    val settings = LocalSettingsAction.current
+    if (enabled) content() else ToolColumn {
+        StatePanel("Turned off in Settings", "This feature will not make network requests until both its own switch and the master Internet switch are enabled.",
+            action = { if (settings != null) OutlinedButton(onClick = settings) { Text("Open Settings") } })
+    }
 }
 
 fun notify(context: Context, message: String) {

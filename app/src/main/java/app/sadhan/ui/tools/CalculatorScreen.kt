@@ -14,23 +14,28 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import app.sadhan.core.ExpressionEvaluator
-import app.sadhan.core.number
+import app.sadhan.core.inputNumber
+import app.sadhan.core.normalizeExpressionInput
 import app.sadhan.ui.ErrorText
 import app.sadhan.ui.ResultCard
 import app.sadhan.ui.Input
 import app.sadhan.ui.copy
+import app.sadhan.ui.ReportTabWork
 
 @Composable
 fun CalculatorScreen() {
     val context = LocalContext.current
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    val decimal = java.text.DecimalFormatSymbols.getInstance(locale).decimalSeparator.toString()
     var expression by remember { mutableStateOf("") }
     var history by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    ReportTabWork("calculator", if (expression.isNotBlank()) "Your calculation will be erased." else null)
     fun calculate() {
         try {
-            val result = number(ExpressionEvaluator.evaluate(expression))
+            val result = inputNumber(ExpressionEvaluator.evaluate(normalizeExpressionInput(expression, locale)), locale)
             history = "$expression = $result"
             expression = result
             error = null
@@ -46,7 +51,7 @@ fun CalculatorScreen() {
             else -> if (expression.length < 512) expression += value
         }
     }
-    val numbers = listOf(listOf("7", "8", "9", "÷"), listOf("4", "5", "6", "×"), listOf("1", "2", "3", "−"), listOf("0", ".", "⌫", "+"))
+    val numbers = listOf(listOf("7", "8", "9", "÷"), listOf("4", "5", "6", "×"), listOf("1", "2", "3", "−"), listOf("0", decimal, "⌫", "+"))
     val auxiliary = listOf("(", ")", "%", "C")
     val display: @Composable () -> Unit = {
         Input("Expression", expression, { expression = it.take(512); error = null })

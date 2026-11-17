@@ -43,6 +43,7 @@ import app.sadhan.ui.ResultCard
 import app.sadhan.ui.ToolColumn
 import app.sadhan.ui.LocalAppLifecycleOwner
 import app.sadhan.ui.LocalToolVisible
+import app.sadhan.ui.ReportTabWork
 import androidx.compose.runtime.collectAsState
 import app.sadhan.ui.theme.Amber
 import kotlinx.coroutines.delay
@@ -67,6 +68,7 @@ fun TimerScreen() {
     var running by remember { mutableStateOf(false) }
     var finished by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    ReportTabWork("timer", if (running || finished) "The active timer will be stopped and reset." else null)
     val tone = remember { mutableStateOf<Ringtone?>(null) }
     DisposableEffect(owner) {
         val observer = LifecycleEventObserver { _, event ->

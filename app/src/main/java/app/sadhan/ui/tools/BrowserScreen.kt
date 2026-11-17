@@ -43,6 +43,9 @@ fun BrowserScreen() {
     var address by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     val current = tabs[active]
+    fun act(action: () -> Unit) {
+        try { action() } catch (failure: IllegalStateException) { error = failure.message }
+    }
     LaunchedEffect(current, current.url) { address = current.url }
     DisposableEffect(current, owner) {
         current.resume()
@@ -60,7 +63,7 @@ fun BrowserScreen() {
             WebStorage.getInstance().deleteAllData()
         }
     }
-    BackHandler(current.back) { current.view.goBack() }
+    BackHandler(!current.stopped && current.back) { act(current::goBack) }
     Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         BetaChip()
         Text("PRIVATE SESSION · Not anonymous", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
@@ -93,22 +96,36 @@ fun BrowserScreen() {
         if (tabs.size == 8) Text("8-tab memory limit reached. Close a tab to open another.", style = MaterialTheme.typography.labelSmall)
         Input("HTTPS address or search", address, { address = it })
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            IconButton(enabled = current.back, onClick = { current.view.goBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Browser back") }
-            IconButton(enabled = current.forward, onClick = { current.view.goForward() }) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Browser forward") }
-            IconButton(enabled = current.url.isNotEmpty(), onClick = { current.view.reload() }) { Icon(Icons.Default.Refresh, "Reload page") }
-            Button(onClick = {
+            IconButton(enabled = !current.stopped && current.back, onClick = { act(current::goBack) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Browser back") }
+            IconButton(enabled = !current.stopped && current.forward, onClick = { act(current::goForward) }) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Browser forward") }
+            IconButton(enabled = !current.stopped && current.url.isNotEmpty(), onClick = { act(current::reload) }) { Icon(Icons.Default.Refresh, "Reload page") }
+            Button(enabled = !current.stopped, onClick = {
                 try { current.load(browserDestination(address)); error = null; focus.clearFocus() }
                 catch (e: IllegalArgumentException) { error = e.message }
                 catch (e: IllegalStateException) { error = e.message }
             }) { Text("Go") }
         }
-        ErrorText(error ?: current.error)
+        ErrorText(if (current.stopped) current.error else error ?: current.error)
+        if (current.stopped) {
+            Text("This tab is stopped. Its old renderer cannot receive navigation commands.")
+            Button(onClick = {
+                val destination = current.url
+                current.close()
+                val replacement = PrivateBrowserTab(context)
+                tabs[active] = replacement
+                error = null
+                if (destination.isNotBlank()) {
+                    try { replacement.load(browserDestination(destination)) }
+                    catch (failure: IllegalArgumentException) { error = failure.message }
+                }
+            }) { Text("Open replacement tab") }
+        }
         if (current.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (current.url.isEmpty()) {
             Text("Tabs and history exist only during this browser session. Cookies, DOM/form storage and downloads are disabled; web data is cleared on exit.")
             Text("Websites still see your IP and may fingerprint you. Android/WebView can retain operational data; this is not a forensic-safe or anonymous browser.", style = MaterialTheme.typography.bodySmall)
         }
-        key(current) {
+        if (!current.stopped) key(current) {
             AndroidView(
                 factory = {
                     current.view.also { view -> val parent = view.parent; if (parent is ViewGroup) parent.removeView(view) }

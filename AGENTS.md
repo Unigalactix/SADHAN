@@ -10,6 +10,9 @@ Instructions for any coding agent (or human) continuing this project. Read this 
   licensing and a GitHub Pages landing page. Read `SPEC.md` for current details.
 - **Repo:** `github.com/Unigalactix/SADHAN` (public). Owner: Rajesh Kodaganti (Unigalactix).
 - **Distribution:** signed APK attached to GitHub Releases. No Play Store.
+- **Quality candidate:** v1.2.0-rc.1 (code 3) is a prerelease. Read SPEC §11
+  and QUALITY.md; do not promote it to stable while external acceptance gates
+  remain outstanding. Latest stable remains v1.1.0.
 
 ## What SADHAN is
 

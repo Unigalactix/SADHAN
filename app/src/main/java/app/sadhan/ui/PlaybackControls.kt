@@ -25,7 +25,7 @@ fun PlaybackControls(session: PlaybackSession) {
     val available = session.queue.isNotEmpty()
     Text(session.current?.title ?: "Select a local file", style = MaterialTheme.typography.titleMedium)
     if (session.buffering) LinearProgressIndicator(Modifier.fillMaxWidth())
-    Text("${elapsedLabel(session.position).substringBefore('.')} / ${elapsedLabel(session.duration).substringBefore('.')}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
+    Text("${elapsedLabel(session.position).substringBefore('.')} / ${elapsedLabel(session.duration).substringBefore('.')}", style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = "tnum"), color = MaterialTheme.colorScheme.secondary)
     Slider(
         value = if (dragging) seek else session.position.toFloat().coerceIn(0f, session.duration.toFloat().coerceAtLeast(1f)),
         onValueChange = { dragging = true; seek = it },

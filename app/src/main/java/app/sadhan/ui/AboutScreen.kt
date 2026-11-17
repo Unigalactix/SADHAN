@@ -28,6 +28,8 @@ fun AboutScreen(updatesEnabled: Boolean, updates: UpdateState, onDeveloper: () -
         } else Text("Turned off in Settings")
         OutlinedButton(onClick = onDeveloper) { Text("About developer") }
         OutlinedButton(onClick = { openUrl(context, UpdateChecker.REPOSITORY) }) { Text("Source code on GitHub") }
+        OutlinedButton(onClick = { openUrl(context, "${UpdateChecker.REPOSITORY}/issues/new/choose") }) { Text("Report an issue") }
+        Text("Reporting opens GitHub in your browser. No diagnostics, inputs or screenshots are attached automatically.")
         Text("MIT License · Copyright 2026 Rajesh Kodaganti")
         OutlinedButton(onClick = { openUrl(context, "${UpdateChecker.REPOSITORY}/blob/main/LICENSE") }) { Text("Read MIT license") }
         Text("Built with AndroidX / Jetpack Compose, CameraX, Media3, WindowManager, Kotlin and ZXing (Apache 2.0).")

@@ -44,6 +44,8 @@ fun VideoPlayerScreen(fullscreen: Boolean = false, onFullscreen: (Boolean) -> Un
     val owner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val session = rememberPlaybackSession()
+    ReportTabWork("video", if (session.queue.isNotEmpty()) "The video queue and playback position will be erased." else null)
+    val library = rememberMediaLibrary(video = true)
     var ratio by remember { mutableStateOf("Fit") }
     var subtitleSize by remember { mutableFloatStateOf(1f) }
     var volume by remember { mutableFloatStateOf(1f) }
@@ -88,7 +90,7 @@ fun VideoPlayerScreen(fullscreen: Boolean = false, onFullscreen: (Boolean) -> Un
             }
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.Black.copy(alpha = .8f)).padding(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = session::playPause) { Text(if (session.playing) "Pause" else "Play") }
+                    Button(onClick = session::playPause) { Text(if (session.wantsPlay) "Pause" else "Play") }
                     Text("${elapsedLabel(session.position).substringBefore('.')} / ${elapsedLabel(session.duration).substringBefore('.')}", color = Color.White)
                     TextButton(onClick = { session.player.seekBack() }) { Text("-10s") }
                     TextButton(onClick = { session.player.seekForward() }) { Text("+10s") }
@@ -108,7 +110,7 @@ fun VideoPlayerScreen(fullscreen: Boolean = false, onFullscreen: (Boolean) -> Un
         }
         ErrorText(error)
         Text("Local files only. Codec and embedded-track support depend on the file and device. No viewing history or background playback.", style = MaterialTheme.typography.bodySmall)
-        MediaLibrary(video = true) { items, index -> session.load(items, index, true) }
+        MediaLibrary(video = true, state = library) { items, index -> session.load(items, index, true) }
         if (session.queue.size > 1) {
             Text("Video queue", style = MaterialTheme.typography.titleMedium)
             LibraryList(session.queue) { _, index -> session.player.seekTo(index, 0); session.player.play() }

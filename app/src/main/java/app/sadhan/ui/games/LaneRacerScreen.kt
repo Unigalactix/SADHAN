@@ -9,21 +9,23 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.sadhan.games.*
-import app.sadhan.ui.ResultCard
-import app.sadhan.ui.ToolColumn
+import app.sadhan.ui.ReportTabWork
 import kotlinx.coroutines.delay
 
 @Composable
 fun LaneRacerScreen() {
     var game by remember { mutableStateOf(LaneRacerGame()) }
     val running = rememberGameRunning()
+    ReportTabWork("race", if (running.value || game.distance > 0) "Your race progress will be erased." else null)
     val colors = MaterialTheme.colorScheme
     LaunchedEffect(running.value, game.ended) {
         while (running.value && !game.ended) { delay(50); game = game.step(.05f) }
     }
-    ToolColumn {
-        ResultCard(if (game.ended) "Collision — game over" else "Lane Racer", "Distance ${game.distance.toInt()}")
-        Canvas(gameBoardModifier()) {
+    GamePage(
+        pause = { running.value = false },
+        help = "Use Left and Right to dodge traffic. Speed increases with distance. A collision ends the run.",
+        status = { Text(if (game.ended) "Collision · ${game.distance.toInt()}" else "Distance ${game.distance.toInt()}", style = MaterialTheme.typography.titleLarge) },
+        board = { modifier -> Canvas(modifier) {
             val roadWidth = minOf(size.width, size.height * .7f)
             val left = (size.width - roadWidth) / 2
             val lane = roadWidth / 3
@@ -40,12 +42,13 @@ fun LaneRacerScreen() {
             }
             game.cars.forEach { car(it.lane, it.y, colors.primary) }
             car(game.lane, 17f, colors.secondary)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            Button(enabled = running.value, onClick = { game = game.steer(-1) }) { Text("← Left") }
-            Button(enabled = running.value, onClick = { game = game.steer(1) }) { Text("Right →") }
-        }
-        Text("Avoid traffic. The road accelerates as distance increases.")
-        GameActions(running, game.ended) { game = LaneRacerGame() }
-    }
+        } },
+        controls = {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(enabled = running.value, onClick = { game = game.steer(-1) }, modifier = androidx.compose.ui.Modifier.weight(1f)) { Text("Left") }
+                Button(enabled = running.value, onClick = { game = game.steer(1) }, modifier = androidx.compose.ui.Modifier.weight(1f)) { Text("Right") }
+            }
+        },
+        footer = { GameActions(running, game.ended) { game = LaneRacerGame() } },
+    )
 }

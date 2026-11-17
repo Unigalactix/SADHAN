@@ -8,7 +8,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import app.sadhan.core.convert
-import app.sadhan.core.number
+import app.sadhan.core.inputNumber
+import app.sadhan.core.toInputDoubleOrNull
 import app.sadhan.core.unitCategories
 import app.sadhan.ui.Choice
 import app.sadhan.ui.ErrorText
@@ -35,8 +36,8 @@ fun UnitConverterScreen() {
         if (input.isNotBlank()) {
             var failure: String? = null
             val result = try {
-                val value = input.toDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid number")
-                number(convert(value, category, from, to))
+                val value = input.toInputDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid number")
+                inputNumber(convert(value, category, from, to))
             } catch (e: IllegalArgumentException) { failure = e.message; null }
             ErrorText(failure)
             if (result != null) ResultCard(to, result)

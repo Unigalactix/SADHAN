@@ -32,8 +32,7 @@ class AdaptiveUiTest {
     @After fun close() { scenario.close() }
 
     private fun open(title: String) {
-        compose.onNodeWithTag("tool-list").performScrollToNode(hasText(title))
-        compose.onNode(hasText(title) and hasAnyAncestor(hasTestTag("tool-list"))).performClick()
+        openCatalogTool(compose, title)
     }
 
     private fun webView(): WebView {
@@ -51,9 +50,15 @@ class AdaptiveUiTest {
     }
 
     @Test fun lightDarkAndSystemThemesAreRealAndPersist() {
-        compose.onNodeWithContentDescription("Settings").performClick()
+        selectPrimaryDestination(compose, "Settings")
         compose.onNodeWithText("System").assertIsSelected()
         compose.onNodeWithText("Dark").performClick()
+        compose.waitForIdle()
+        scenario.onActivity {
+            val bars = androidx.core.view.WindowCompat.getInsetsController(it.window, it.window.decorView)
+            assertFalse(bars.isAppearanceLightStatusBars)
+            assertFalse(bars.isAppearanceLightNavigationBars)
+        }
         val darkPixels = compose.onRoot().captureToImage().toPixelMap()
         val dark = darkPixels[1, 120].luminance()
         val title = compose.onNodeWithText("Make it yours").fetchSemanticsNode().boundsInRoot
@@ -63,6 +68,12 @@ class AdaptiveUiTest {
         }
         assertTrue("Dark-mode default text must contrast with the navy surface", foreground > .6f)
         compose.onNodeWithText("Light").performClick()
+        compose.waitForIdle()
+        scenario.onActivity {
+            val bars = androidx.core.view.WindowCompat.getInsetsController(it.window, it.window.decorView)
+            assertTrue(bars.isAppearanceLightStatusBars)
+            assertTrue(bars.isAppearanceLightNavigationBars)
+        }
         val light = compose.onRoot().captureToImage().toPixelMap()[1, 120].luminance()
         assertTrue("Dark and light must actually change rendered surfaces", dark < .2f && light > .6f)
         scenario.recreate()
@@ -106,7 +117,7 @@ class AdaptiveUiTest {
         compose.onNodeWithContentDescription("Back").performClick()
         open("Private Browser")
         compose.onAllNodesWithContentDescription("Close private tab").assertCountEquals(2)
-        compose.onNodeWithContentDescription("Close Private Browser tab").performClick()
+        closeWorkspaceTool(compose, "Private Browser")
         open("Private Browser")
         compose.onAllNodesWithContentDescription("Close private tab").assertCountEquals(1)
         compose.onNodeWithText("HTTPS address or search").assertExists()

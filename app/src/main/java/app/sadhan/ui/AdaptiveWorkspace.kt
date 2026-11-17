@@ -60,20 +60,19 @@ fun AdaptiveWorkspace(route: String, topPadding: androidx.compose.ui.unit.Dp, fu
                 } else if (split != null && !fullscreen) {
                     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("YOUR TOOLBOX", Modifier.padding(12.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        NavigationDrawerItem(label = { Text("All tools") }, selected = route == "home", onClick = { navigate("home") })
+                        AppDestination.entries.forEach { destination ->
+                            NavigationDrawerItem(label = { Text(destination.label) }, selected = route == destination.route, onClick = { navigate(destination.route) })
+                        }
                         toolCatalog.forEach { tool ->
                             NavigationDrawerItem(label = { Text(tool.title) }, icon = { Icon(tool.icon, null) }, selected = route == tool.route, onClick = { navigate(tool.route) })
                         }
-                        NavigationDrawerItem(label = { Text("Settings") }, selected = route == "settings", onClick = { navigate("settings") })
-                        NavigationDrawerItem(label = { Text("About") }, selected = route == "about", onClick = { navigate("about") })
                     }
                 } else if (rail) {
                     NavigationRail(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .65f)) {
                         Spacer(Modifier.height(20.dp))
-                        NavigationRailItem(selected = route == "home", onClick = { navigate("home") }, icon = { Icon(Icons.Default.GridView, "All tools") }, label = { Text("Tools") })
-                        Spacer(Modifier.weight(1f))
-                        NavigationRailItem(selected = route == "settings", onClick = { navigate("settings") }, icon = { Icon(Icons.Default.Settings, "Settings") }, label = { Text("Settings") })
-                        NavigationRailItem(selected = route == "about", onClick = { navigate("about") }, icon = { Icon(Icons.Default.Info, "About") }, label = { Text("About") })
+                        AppDestination.entries.forEach { destination ->
+                            NavigationRailItem(selected = route == destination.route, onClick = { navigate(destination.route) }, icon = { Icon(destination.icon, destination.label) }, label = { Text(destination.label) })
+                        }
                     }
                 }
             }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,13 +14,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.sadhan.games.*
 import app.sadhan.ui.ErrorText
-import app.sadhan.ui.ToolColumn
+import app.sadhan.ui.ReportTabWork
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SolitaireScreen() {
     var game by remember { mutableStateOf(SolitaireGame.new()) }
     val history = remember { mutableStateListOf<SolitaireGame>() }
+    ReportTabWork("solitaire", if (game.moves > 0) "Your solitaire game and undo history will be erased." else null)
     var selected by remember { mutableStateOf<CardSource?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     fun change(action: () -> SolitaireGame) {
@@ -29,9 +31,13 @@ fun SolitaireScreen() {
             selected = null; error = null
         } catch (e: IllegalArgumentException) { error = e.message }
     }
-    ToolColumn {
+    GamePage(
+        help = "Draw-one Klondike with unlimited redeals. Select a face-up card or sequence, then a numbered tableau pile or foundation. Build downward in alternating colors; empty piles require Kings. Foundations build Ace to King by suit. The tableau scrolls sideways on narrow panes.",
+        status = {
         Text(if (game.won) "All foundations complete!" else "Klondike Solitaire", style = MaterialTheme.typography.titleLarge)
         Text("${game.moves} moves · Stock ${game.stock.size} · Foundations ${game.foundations.sumOf { it.size }}/52")
+        },
+        board = { modifier -> Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(onClick = { change { game.draw() } }, enabled = !game.won && (game.stock.isNotEmpty() || game.waste.isNotEmpty())) { Text(if (game.stock.isEmpty()) "Recycle waste" else "Draw one") }
             game.waste.lastOrNull()?.let { card -> PlayingCardView(card, selected?.let { it.column == null && it.foundation == null } == true) { selected = CardSource(); error = null } }
@@ -63,13 +69,15 @@ fun SolitaireScreen() {
                 }
             }
         }
-        ErrorText(error)
+        } },
+        controls = { ErrorText(error) },
+        footer = {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(enabled = history.isNotEmpty(), onClick = { game = history.removeAt(history.lastIndex); selected = null; error = null }) { Text("Undo") }
             OutlinedButton(onClick = { game = SolitaireGame.new(); history.clear(); selected = null; error = null }) { Text("New game") }
         }
-        Text("Tap a face-up card to select its sequence, then a numbered pile or foundation. Empty tableau piles require Kings. Draw-one, unlimited redeals; no saved progress. The board scrolls sideways on narrow screens.", style = MaterialTheme.typography.bodySmall)
-    }
+        },
+    )
 }
 
 @Composable

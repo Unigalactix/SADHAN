@@ -3,7 +3,8 @@ package app.sadhan.ui.tools
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import app.sadhan.core.PercentageMode
-import app.sadhan.core.number
+import app.sadhan.core.inputNumber
+import app.sadhan.core.toInputDoubleOrNull
 import app.sadhan.core.percentage
 import app.sadhan.ui.*
 
@@ -19,10 +20,10 @@ fun PercentageScreen() {
         if (first.isNotBlank() && second.isNotBlank()) {
             var error: String? = null
             val result = try {
-                percentage(mode, first.toDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid first number"), second.toDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid second number"))
+                percentage(mode, first.toInputDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid first number"), second.toInputDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid second number"))
             } catch (e: IllegalArgumentException) { error = e.message; null }
             ErrorText(error)
-            result?.let { ResultCard("Result", number(it) + if (mode == PercentageMode.OF) "" else "%") }
+            result?.let { ResultCard("Result", inputNumber(it) + if (mode == PercentageMode.OF) "" else "%") }
         }
         Text("Percentage change uses the absolute original value as its denominator.")
     }

@@ -10,7 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import app.sadhan.core.number
+import app.sadhan.core.inputNumber
 import app.sadhan.data.City
 import app.sadhan.data.Weather
 import app.sadhan.data.WeatherRepository
@@ -66,9 +66,9 @@ fun WeatherScreen() {
         ErrorText(error)
         weather?.let { forecast ->
             Text("${selected?.name}, ${selected?.region}")
-            ResultCard(forecast.condition, "${number(forecast.temperature)} °C")
-            ResultCard("Humidity / wind", "${forecast.humidity}% / ${number(forecast.wind)} km/h")
-            forecast.days.forEach { day -> ResultCard(day.date, "${number(day.minimum)}° / ${number(day.maximum)}°") }
+            ResultCard(forecast.condition, "${inputNumber(forecast.temperature)} °C")
+            ResultCard("Humidity / wind", "${forecast.humidity}% / ${inputNumber(forecast.wind)} km/h")
+            forecast.days.forEach { day -> ResultCard(day.date, "${inputNumber(day.minimum)}° / ${inputNumber(day.maximum)}°") }
         }
         Text("Weather data: Open-Meteo (CC BY 4.0). City search only; no location permission.")
     }

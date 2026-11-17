@@ -18,17 +18,18 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.*
-import app.sadhan.data.SettingsStore
+import app.sadhan.data.*
 import app.sadhan.ui.*
 import app.sadhan.ui.theme.SadhanTheme
 import app.sadhan.update.UpdateState
@@ -50,6 +51,7 @@ private fun SadhanApp(store: SettingsStore) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val focus = LocalFocusManager.current
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val expanded = LocalConfiguration.current.screenWidthDp >= 840
     val settings = store.value
     val updates = remember { UpdateState() }
     val updatesEnabled = settings.internet && settings.updates
@@ -57,32 +59,50 @@ private fun SadhanApp(store: SettingsStore) {
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route ?: "home"
-    val tabs = remember { mutableStateListOf<String>() }
+    val workspace = remember { WorkspaceController() }
     val tabScroll = rememberLazyListState()
+    var overview by remember { mutableStateOf(false) }
+    var pendingClose by remember { mutableStateOf<Set<String>?>(null) }
     var fullscreen by remember { mutableStateOf(false) }
+    val tool = toolCatalog.firstOrNull { it.route == route }
+    val primary = AppDestination.entries.firstOrNull { it.route == route }
+
     fun navigate(destination: String) {
         if (destination == route) return
-        if (toolCatalog.any { it.route == destination } && destination !in tabs) {
-            if (tabs.size == 6) { notify(context, "Six tool tabs are open. Close a tab before adding another."); return }
-            tabs.add(destination)
+        if (toolCatalog.any { it.route == destination } && workspace.open(destination) == OpenSessionResult.LIMIT) {
+            overview = true
+            notify(context, "Six tool tabs are open. Close a tab to add another.")
+            return
         }
         nav.navigate(destination) { popUpTo("home"); launchSingleTop = true }
+    }
+    fun closeNow(routes: Set<String>) {
+        val destination = toolCatalog.firstOrNull { it.route == route }?.parentDestination() ?: "home"
+        workspace.close(routes)
+        pendingClose = null
+        if (route in routes) { fullscreen = false; navigate(destination) }
+        if (workspace.sessions.isEmpty()) overview = false
+    }
+    fun requestClose(routes: Set<String>) {
+        if (routes.size > 1 || workspace.sessions.any { it.route in routes && it.closeWarning != null }) pendingClose = routes
+        else closeNow(routes)
     }
     LaunchedEffect(route) {
         focus.clearFocus(force = true)
         keyboard?.hide()
-        if (toolCatalog.any { it.route == route } && route !in tabs) nav.popBackStack("home", false)
+        if (tool != null && workspace.sessions.none { it.route == route }) nav.popBackStack("home", false)
     }
-    LaunchedEffect(route, tabs.size) { tabs.indexOf(route).takeIf { it >= 0 }?.let { tabScroll.animateScrollToItem(it) } }
-    val tool = toolCatalog.firstOrNull { it.route == route }
-    val title = tool?.title ?: when (route) {
-        "settings" -> "Settings"
+    LaunchedEffect(route, workspace.sessions.size) {
+        workspace.sessions.indexOfFirst { it.route == route }.takeIf { it >= 0 }?.let { tabScroll.animateScrollToItem(it) }
+    }
+    BackHandler(tool != null && !fullscreen) { navigate(requireNotNull(tool).parentDestination()) }
+    val title = tool?.title ?: primary?.label?.takeUnless { primary == AppDestination.TOOLS } ?: when (route) {
         "about" -> "About"
         "developer" -> "About developer"
         "licenses" -> "Open-source licenses"
         else -> "SADHAN"
     }
-    BackHandler(tool != null && !fullscreen) { navigate("home") }
+    CompositionLocalProvider(LocalSettingsAction provides { navigate("settings") }) {
     GlassBackground {
         Scaffold(
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -92,69 +112,80 @@ private fun SadhanApp(store: SettingsStore) {
                     TopAppBar(
                         title = {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                if (route == "home") Image(painterResource(R.drawable.launcher_foreground), null, Modifier.size(40.dp))
+                                if (route == "home") Image(painterResource(R.drawable.launcher_foreground), null, Modifier.size(36.dp))
                                 Text(title, style = MaterialTheme.typography.titleLarge)
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .76f)),
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .8f)),
                         navigationIcon = {
-                            if (route != "home") IconButton(onClick = { if (tool != null) navigate("home") else nav.popBackStack() }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                            }
+                            if (tool != null || primary == null && route != "home" || route == "settings") IconButton(onClick = {
+                                if (tool != null) navigate(tool.parentDestination()) else nav.popBackStack()
+                            }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                         },
                         actions = {
-                            if (route == "home" && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 840) {
-                                IconButton(onClick = { navigate("about") }) { Icon(Icons.Default.Info, "About") }
-                                IconButton(onClick = { navigate("settings") }) { Icon(Icons.Default.Settings, "Settings") }
+                            IconButton(onClick = { overview = true }) {
+                                BadgedBox(badge = { if (workspace.sessions.isNotEmpty()) Badge { Text(workspace.sessions.size.toString()) } }) { Icon(Icons.Default.Tab, "Workspace") }
                             }
+                            if (primary != null) IconButton(onClick = { nav.navigate("about") }) { Icon(Icons.Default.Info, "About") }
                         },
                     )
-                    if (tabs.isNotEmpty()) LazyRow(Modifier.padding(horizontal = 12.dp), state = tabScroll, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(tabs, key = { it }) { tab ->
-                            val label = toolCatalog.first { it.route == tab }.title
-                            InputChip(
-                                selected = route == tab, onClick = { navigate(tab) }, label = { Text(label) },
-                                trailingIcon = {
-                                    IconButton(onClick = {
-                                        val wasActive = route == tab
-                                        tabs.remove(tab)
-                                        if (wasActive) navigate("home")
-                                    }) { Icon(Icons.Default.Close, "Close $label tab") }
-                                },
-                            )
+                    if (expanded && workspace.sessions.isNotEmpty()) LazyRow(Modifier.padding(horizontal = 12.dp), state = tabScroll, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(workspace.sessions, key = { it.route }) { session ->
+                            val label = toolCatalog.first { it.route == session.route }.title
+                            InputChip(selected = route == session.route, onClick = { navigate(session.route) }, label = { Text(label) }, trailingIcon = {
+                                IconButton(onClick = { requestClose(setOf(session.route)) }) { Icon(Icons.Default.Close, "Close $label tab") }
+                            })
                         }
                         item { IconButton(onClick = { navigate("home") }) { Icon(Icons.Default.Add, "Open another tool") } }
+                    }
+                }
+            },
+            bottomBar = {
+                if (!fullscreen && !expanded && primary != null) NavigationBar(tonalElevation = 0.dp) {
+                    AppDestination.entries.forEach { destination ->
+                        NavigationBarItem(selected = route == destination.route, onClick = { navigate(destination.route) },
+                            icon = { Icon(destination.icon, destination.label) }, label = { Text(destination.label) })
                     }
                 }
             },
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding().clipToBounds()) {
                 NavHost(nav, "home", enterTransition = { fadeIn(tween(180)) }, exitTransition = { fadeOut(tween(120)) }) {
-                    composable("home") {
-                        AdaptiveWorkspace("home", padding.calculateTopPadding(), false, ::navigate, companion = {}) {
-                            HomeScreen(updatesEnabled, updates, ::navigate)
+                    AppDestination.entries.forEach { destination ->
+                        composable(destination.route) {
+                            AdaptiveWorkspace(destination.route, padding.calculateTopPadding(), false, ::navigate, companion = {}) {
+                                if (destination == AppDestination.SETTINGS) SettingsScreen(store)
+                                else HomeScreen(updatesEnabled, updates, ::navigate, destination)
+                            }
                         }
                     }
-                    composable("settings") { AdaptiveWorkspace("settings", padding.calculateTopPadding(), false, ::navigate, companion = {}) { SettingsScreen(store) } }
-                    composable("about") {
-                        AdaptiveWorkspace("about", padding.calculateTopPadding(), false, ::navigate, companion = {}) {
-                            AboutScreen(updatesEnabled, updates, onDeveloper = { nav.navigate("developer") }, onLicenses = { nav.navigate("licenses") })
-                        }
-                    }
+                    composable("about") { AboutScreen(updatesEnabled, updates, onDeveloper = { nav.navigate("developer") }, onLicenses = { nav.navigate("licenses") }) }
                     composable("developer") { DeveloperScreen() }
                     composable("licenses") { LicensesScreen() }
                     toolCatalog.forEach { descriptor -> composable(descriptor.route) {} }
                 }
-                tabs.forEach { tab ->
-                    key(tab) {
-                        ToolTabHost(active = route == tab) {
-                            AdaptiveWorkspace(tab, padding.calculateTopPadding(), fullscreen && route == tab, ::navigate, companion = { CompanionToolPane(tab, settings) }) {
-                                ToolContent(tab, store, fullscreen && route == tab) { fullscreen = it }
+                workspace.sessions.forEach { session ->
+                    key(session.route) {
+                        CompositionLocalProvider(LocalWorkspaceSession provides session) {
+                            ToolTabHost(active = route == session.route) {
+                                AdaptiveWorkspace(session.route, padding.calculateTopPadding(), fullscreen && route == session.route, ::navigate,
+                                    companion = { CompanionToolPane(session.route, settings) }) {
+                                    ToolContent(session.route, store, fullscreen && route == session.route) { fullscreen = it }
+                                }
                             }
                         }
                     }
                 }
             }
         }
+        if (overview) WorkspaceOverview(workspace, route, ::navigate, ::requestClose) { overview = false }
+        pendingClose?.let { routes ->
+            AlertDialog(onDismissRequest = { pendingClose = null }, title = { Text(if (routes.size == 1) "Close this tab?" else "Close ${routes.size} tabs?") },
+                text = { Text((workspace.sessions.filter { it.route in routes }.mapNotNull { it.closeWarning }.distinct() +
+                    "This erases the selected tabs' in-memory work immediately. There is no undo and nothing is saved to disk.").joinToString("\n\n")) },
+                confirmButton = { TextButton(onClick = { closeNow(routes) }) { Text("Close tab${if (routes.size > 1) "s" else ""}") } },
+                dismissButton = { TextButton(onClick = { pendingClose = null }) { Text("Keep open") } })
+        }
+    }
     }
 }

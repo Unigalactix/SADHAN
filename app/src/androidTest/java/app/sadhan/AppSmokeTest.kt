@@ -35,24 +35,20 @@ class AppSmokeTest {
     @After fun close() { scenario.close() }
 
     private fun openTool(title: String) {
-        compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool-list").fetchSemanticsNodes().size == 1 }
-        compose.onNodeWithTag("tool-list").performScrollToNode(hasText(title))
-        val target = hasText(title) and hasAnyAncestor(hasTestTag("tool-list"))
-        compose.waitUntil(10_000) { compose.onAllNodes(target).fetchSemanticsNodes().size == 1 && compose.onNode(target).isDisplayed() }
-        compose.onNode(target).performClick()
+        openCatalogTool(compose, title)
     }
 
     @Test fun everyToolOpensAndInternetGatesWork() {
-        compose.onNodeWithContentDescription("Settings").performClick()
-        compose.onNodeWithContentDescription("Internet").performClick()
+        selectPrimaryDestination(compose, "Settings")
+        compose.onNodeWithContentDescription("Internet").performScrollTo().performClick()
         compose.onNodeWithContentDescription("Back").performClick()
         toolCatalog.forEach { tool ->
             openTool(tool.title)
             compose.onAllNodesWithText(tool.title)[0].assertIsDisplayed()
             if (tool.route in listOf("weather", "currency", "youtube", "browser")) {
-                compose.onNodeWithText("Turned off in Settings").assertIsDisplayed()
+                compose.onNodeWithText("Turned off in Settings").performScrollTo().assertIsDisplayed()
             }
-            compose.onNodeWithContentDescription("Close ${tool.title} tab").performClick()
+            closeWorkspaceTool(compose, tool.title)
         }
     }
 
@@ -62,10 +58,12 @@ class AppSmokeTest {
         compose.onNodeWithContentDescription("Back").performClick()
         openTool("Scratchpad")
         compose.onNodeWithText("private temporary note").assertExists()
-        compose.onNodeWithContentDescription("Close Scratchpad tab").performClick()
+        closeWorkspaceTool(compose, "Scratchpad", confirm = false)
+        compose.onNodeWithText("private temporary note").assertExists()
+        closeWorkspaceTool(compose, "Scratchpad")
         openTool("Scratchpad")
         compose.onNodeWithText("private temporary note").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Close Scratchpad tab").performClick()
+        closeWorkspaceTool(compose, "Scratchpad")
         openTool("Calculator")
         compose.onNodeWithText("Expression").performTextInput("2*(3+4)")
         compose.onNodeWithText("Calculate").performClick()
@@ -87,8 +85,8 @@ class AppSmokeTest {
     }
 
     @Test fun internetSettingSurvivesActivityRecreation() {
-        compose.onNodeWithContentDescription("Settings").performClick()
-        compose.onNodeWithContentDescription("Internet").performClick()
+        selectPrimaryDestination(compose, "Settings")
+        compose.onNodeWithContentDescription("Internet").performScrollTo().performClick()
         scenario.recreate()
         compose.onNodeWithContentDescription("Back").performClick()
         openTool("Weather")

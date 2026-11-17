@@ -13,11 +13,12 @@ import androidx.compose.ui.unit.dp
 import app.sadhan.update.UpdateState
 
 @Composable
-fun HomeScreen(updatesEnabled: Boolean, updates: UpdateState, navigate: (String) -> Unit) {
+fun HomeScreen(updatesEnabled: Boolean, updates: UpdateState, navigate: (String) -> Unit, destination: AppDestination = AppDestination.TOOLS) {
     var query by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("All") }
-    val filtered = toolCatalog.filter {
-        (category == "All" || it.section == category) && (it.title.contains(query, true) || it.subtitle.contains(query, true))
+    val catalog = toolCatalog.filter { it.parentDestination() == destination.route }
+    val filtered = catalog.filter {
+        (category == "All" || it.section == category) && it.matchesSearch(query)
     }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val compact = maxWidth in 380.dp..599.dp && LocalConfiguration.current.fontScale <= 1.2f
@@ -25,17 +26,17 @@ fun HomeScreen(updatesEnabled: Boolean, updates: UpdateState, navigate: (String)
         LazyColumn(Modifier.testTag("tool-list").padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Everything, at hand.", style = MaterialTheme.typography.headlineSmall)
-                    Text("${toolCatalog.count { it.section != "Games" }} tools · ${toolCatalog.count { it.section == "Games" }} games · Session-only tabs", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(when (destination) { AppDestination.MEDIA -> "Your files. Your player."; AppDestination.GAMES -> "A little time to play."; else -> "Everything, at hand." }, style = MaterialTheme.typography.headlineSmall)
+                    Text("${catalog.size} ${if (destination == AppDestination.GAMES) "original games" else "tools"} · Session-only workspace", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedTextField(query, { query = it }, label = { Text("Find a tool") }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        (listOf("All") + toolCatalog.map { it.section }.distinct()).forEach { section ->
+                        (listOf("All") + catalog.map { it.section }.distinct()).forEach { section ->
                             item { FilterChip(selected = category == section, onClick = { category = section }, label = { Text(section) }) }
                         }
                     }
                 }
             }
-            if (updatesEnabled) {
+            if (updatesEnabled && destination == AppDestination.TOOLS) {
                 updates.update?.let { update -> item { UpdateCard(update) } }
                 if (updates.checking) item { Text("Checking for updates...", style = MaterialTheme.typography.labelSmall) }
                 updates.message?.takeIf { !it.startsWith("You're up to date") }?.let { message ->

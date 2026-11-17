@@ -20,6 +20,7 @@ fun PasswordGeneratorScreen() {
     var symbols by remember { mutableStateOf(true) }
     var password by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    ReportTabWork("password", if (password.isNotEmpty()) "The generated password will be erased from this tab." else null)
     ToolColumn {
         Text("Cryptographically secure randomness. Passwords are never saved or sent anywhere.")
         Text("Length: ${length.roundToInt()}")

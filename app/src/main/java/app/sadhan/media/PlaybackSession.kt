@@ -14,6 +14,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.delay
 import app.sadhan.ui.LocalAppLifecycleOwner
+import app.sadhan.ui.LocalToolVisible
 
 data class LibraryItem(val uri: Uri, val title: String, val detail: String = "", val duration: Long = 0, val mime: String = "")
 data class PlaybackTrack(val group: Tracks.Group, val index: Int, val label: String, val supported: Boolean, val selected: Boolean)
@@ -114,15 +115,15 @@ class PlaybackSession(context: Context) {
         }
     }
 
-    fun trackOptions(type: Int): List<PlaybackTrack> = tracks.groups.filter { it.type == type }.flatMap { group ->
+    fun trackOptions(type: Int): List<PlaybackTrack> = tracks.groups.filter { it.type == type }.flatMapIndexed { groupIndex, group ->
         (0 until group.length).map { track ->
             val format = group.getTrackFormat(track)
             val name = listOfNotNull(
-                format.label, format.language?.takeIf { it != "und" },
+                format.label, format.language?.takeIf { it != "und" }?.let { java.util.Locale.forLanguageTag(it).displayLanguage },
                 format.sampleMimeType?.substringAfter('/'),
                 format.channelCount.takeIf { it > 0 }?.let { "$it ch" },
             ).distinct().joinToString(" · ").ifBlank { "Track ${track + 1}" }
-            PlaybackTrack(group, track, name, group.isTrackSupported(track), group.isTrackSelected(track))
+            PlaybackTrack(group, track, "${groupIndex + 1}.${track + 1} · $name", group.isTrackSupported(track), group.isTrackSelected(track))
         }
     }
 
@@ -167,11 +168,17 @@ fun rememberPlaybackSession(keepPlayingInApp: Boolean = false): PlaybackSession 
     val context = LocalContext.current
     val owner = if (keepPlayingInApp) LocalAppLifecycleOwner.current ?: LocalLifecycleOwner.current else LocalLifecycleOwner.current
     val session = remember { PlaybackSession(context) }
+    val visible = LocalToolVisible.current
+    val lifecycle by owner.lifecycle.currentStateFlow.collectAsState()
+    val polling = visible && lifecycle.isAtLeast(Lifecycle.State.STARTED) && session.playing
     DisposableEffect(session, owner) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) session.player.pause() }
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer); session.close() }
     }
-    LaunchedEffect(session) { while (!session.closed) { session.refreshPosition(); delay(200) } }
+    LaunchedEffect(session, polling, visible, lifecycle) {
+        if (visible && lifecycle.isAtLeast(Lifecycle.State.STARTED)) session.refreshPosition()
+        while (polling && !session.closed) { delay(200); session.refreshPosition() }
+    }
     return session
 }

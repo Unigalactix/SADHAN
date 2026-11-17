@@ -4,6 +4,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import app.sadhan.core.randomInteger
+import app.sadhan.core.toInputIntOrNull
 import app.sadhan.ui.*
 
 @Composable
@@ -33,7 +34,7 @@ fun RandomPickerScreen() {
                         require(items.isNotEmpty()) { "Enter at least one option" }
                         items[randomInteger(0, items.lastIndex)]
                     }
-                    "Number" -> randomInteger(minimum.toIntOrNull() ?: throw IllegalArgumentException("Invalid minimum"), maximum.toIntOrNull() ?: throw IllegalArgumentException("Invalid maximum")).toString()
+                    "Number" -> randomInteger(minimum.toInputIntOrNull() ?: throw IllegalArgumentException("Invalid minimum"), maximum.toInputIntOrNull() ?: throw IllegalArgumentException("Invalid maximum")).toString()
                     else -> randomInteger(1, 6).toString()
                 }
             } catch (e: IllegalArgumentException) { error = e.message }

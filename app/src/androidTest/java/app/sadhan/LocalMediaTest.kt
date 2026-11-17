@@ -57,8 +57,7 @@ class LocalMediaTest {
     }
 
     private fun chooseFile(tool: String, button: String, file: File) {
-        compose.onNodeWithTag("tool-list").performScrollToNode(hasText(tool))
-        compose.onNode(hasText(tool) and hasAnyAncestor(hasTestTag("tool-list"))).performClick()
+        openCatalogTool(compose, tool)
         val filter = IntentFilter(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             addDataType("*/*")
@@ -101,11 +100,11 @@ class LocalMediaTest {
 
     @Test fun videoPlaysChosenLocalFileAndReleasesOnExit() {
         val file = fixture("test-video.mp4")
-        makeVideo(file)
+        writeTestVideo(file)
         chooseFile("Video Player", "Choose video", file)
         var video: PlayerView? = null
         fun find(view: View): PlayerView? = when (view) {
-            is PlayerView -> view
+            is PlayerView -> view.takeIf { it.player != null }
             is ViewGroup -> (0 until view.childCount).firstNotNullOfOrNull { find(view.getChildAt(it)) }
             else -> null
         }
@@ -137,61 +136,29 @@ class LocalMediaTest {
         }
         compose.onNodeWithText("Subtitles").performScrollTo().performClick()
         compose.onNodeWithText("Off").performClick()
+        val normalView = requireNotNull(video)
         compose.onNodeWithText("Fullscreen").performScrollTo().performClick()
+        compose.waitUntil(10_000) {
+            var attached = false
+            scenario.onActivity { video = find(it.window.decorView); attached = video != null && video !== normalView }
+            attached
+        }
+        scenario.onActivity {
+            requireNotNull(video?.player).apply { stop(); playWhenReady = true }
+        }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Pause").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Pause").performClick()
+        scenario.onActivity { assertFalse(requireNotNull(video?.player).playWhenReady) }
         compose.onNodeWithContentDescription("Exit fullscreen").assertIsDisplayed().performClick()
-        compose.onNodeWithContentDescription("Close Video Player tab").performClick()
+        val fullscreenView = requireNotNull(video)
+        compose.waitUntil(10_000) {
+            var attached = false
+            scenario.onActivity { video = find(it.window.decorView); attached = video != null && video !== fullscreenView }
+            attached
+        }
+        compose.runOnIdle { assertNull(fullscreenView.player) }
+        closeWorkspaceTool(compose, "Video Player")
         compose.runOnIdle { assertNull(requireNotNull(video).player) }
     }
 
-    private fun makeVideo(file: File) {
-        val encoder = MediaCodec.createEncoderByType("video/avc")
-        val muxer = MediaMuxer(file.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-        var muxing = false
-        try {
-            val format = MediaFormat.createVideoFormat("video/avc", 64, 64).apply {
-                setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible)
-                setInteger(MediaFormat.KEY_BIT_RATE, 64_000)
-                setInteger(MediaFormat.KEY_FRAME_RATE, 15)
-                setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
-            }
-            encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-            encoder.start()
-            var frame = 0
-            var track = -1
-            val info = MediaCodec.BufferInfo()
-            val deadline = System.currentTimeMillis() + 20_000
-            var done = false
-            while (!done && System.currentTimeMillis() < deadline) {
-                if (frame <= 30) {
-                    val input = encoder.dequeueInputBuffer(10_000)
-                    if (input >= 0) {
-                        if (frame == 30) encoder.queueInputBuffer(input, 0, 0, frame * 1_000_000L / 15, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
-                        else {
-                            val pixels = ByteArray(64 * 64 * 3 / 2) { if (it < 64 * 64) 80 else 128.toByte() }
-                            encoder.getInputBuffer(input)!!.put(pixels)
-                            encoder.queueInputBuffer(input, 0, pixels.size, frame * 1_000_000L / 15, 0)
-                        }
-                        frame++
-                    }
-                }
-                val output = encoder.dequeueOutputBuffer(info, 10_000)
-                if (output == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                    track = muxer.addTrack(encoder.outputFormat)
-                    muxer.start()
-                    muxing = true
-                } else if (output >= 0) {
-                    if (info.size > 0 && info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG == 0) {
-                        muxer.writeSampleData(track, requireNotNull(encoder.getOutputBuffer(output)), info)
-                    }
-                    done = info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
-                    encoder.releaseOutputBuffer(output, false)
-                }
-            }
-            check(done) { "Synthetic test video encoding timed out" }
-        } finally {
-            encoder.release()
-            if (muxing) muxer.stop()
-            muxer.release()
-        }
-    }
 }

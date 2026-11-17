@@ -24,6 +24,7 @@ import app.sadhan.ui.ResultCard
 import app.sadhan.ui.ToolColumn
 import app.sadhan.ui.InstrumentDial
 import app.sadhan.ui.LocalToolVisible
+import app.sadhan.ui.ReportTabWork
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -40,6 +41,7 @@ fun StopwatchScreen() {
     var started by remember { mutableLongStateOf(0L) }
     var elapsed by remember { mutableLongStateOf(0L) }
     val laps = remember { mutableStateListOf<Long>() }
+    ReportTabWork("stopwatch", if (running || elapsed > 0) "The stopwatch and session laps will be reset." else null)
     val visible = LocalToolVisible.current
     LaunchedEffect(running, visible) {
         while (running && visible) {

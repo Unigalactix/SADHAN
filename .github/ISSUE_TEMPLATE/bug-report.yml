@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a reproducible SADHAN problem without sharing private tool data.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Please remove notes, passwords, financial inputs, personal filenames and private browsing addresses. SADHAN does not attach diagnostics or tool data automatically."
+  - type: input
+    id: version
+    attributes:
+      label: SADHAN version
+      description: Find this in About.
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android version and device type
+      description: For example Android 15 phone, tablet or foldable. Do not include a device serial number.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: ["Tools", "Media or documents", "Games", "Workspace or resizing", "Browser or YouTube BETA", "Updates or installation", "Other"]
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include orientation, theme and permission state if relevant; use made-up sample data.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Actual and expected behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed credentials, personal tool inputs, private URLs and identifying screenshots.
+          required: true

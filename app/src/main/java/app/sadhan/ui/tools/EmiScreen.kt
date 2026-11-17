@@ -7,6 +7,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import app.sadhan.core.loan
 import app.sadhan.core.money
+import app.sadhan.core.toInputDoubleOrNull
+import app.sadhan.core.toInputIntOrNull
 import app.sadhan.ui.ErrorText
 import app.sadhan.ui.Input
 import app.sadhan.ui.ResultCard
@@ -25,9 +27,9 @@ fun EmiScreen() {
             var failure: String? = null
             val result = try {
                 loan(
-                    principal.toDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid principal"),
-                    rate.toDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid rate"),
-                    months.toIntOrNull() ?: throw IllegalArgumentException("Enter whole months"),
+                    principal.toInputDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid principal"),
+                    rate.toInputDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid rate"),
+                    months.toInputIntOrNull() ?: throw IllegalArgumentException("Enter whole months"),
                 )
             } catch (e: IllegalArgumentException) {
                 failure = e.message

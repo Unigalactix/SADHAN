@@ -1,81 +1,98 @@
 package app.sadhan.ui.games
 
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import app.sadhan.games.RhythmTilesGame
+import app.sadhan.media.GameTone
 import app.sadhan.ui.ErrorText
-import app.sadhan.ui.ResultCard
-import app.sadhan.ui.ToolColumn
+import app.sadhan.ui.ReportTabWork
 import kotlinx.coroutines.delay
-import kotlin.math.PI
-import kotlin.math.exp
-import kotlin.math.sin
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RhythmTilesScreen() {
     var game by remember { mutableStateOf(RhythmTilesGame()) }
     val running = rememberGameRunning()
     var sound by remember { mutableStateOf(true) }
+    var practice by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    val track = remember { mutableStateOf<AudioTrack?>(null) }
+    val context = LocalContext.current
+    val tone = remember { GameTone(context) }
     val colors = MaterialTheme.colorScheme
-    fun note() {
-        if (!sound) return
-        try {
-            track.value?.release()
-            track.value = null
-            val frequency = listOf(261.63, 293.66, 329.63, 392.0, 440.0)[game.score % 5]
-            val samples = ShortArray(4000) { sample ->
-                val t = sample / 16000.0
-                ((sin(2 * PI * frequency * t) + .25 * sin(4 * PI * frequency * t)) * exp(-12 * t) * 7000).toInt().toShort()
-            }
-            val audio = AudioTrack.Builder().setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
-                .setAudioFormat(AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(16000).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
-                .setTransferMode(AudioTrack.MODE_STATIC).setBufferSizeInBytes(samples.size * 2).build()
-            track.value = audio
-            check(audio.write(samples, 0, samples.size) == samples.size) { "Audio output rejected the generated note" }
-            audio.play()
-        } catch (e: IllegalArgumentException) { error = "Sound unavailable: ${e.message}" }
-        catch (e: IllegalStateException) { error = "Sound unavailable: ${e.message}" }
-        catch (e: UnsupportedOperationException) { error = "Sound unavailable: ${e.message}" }
+    ReportTabWork("rhythm", if (running.value || game.score > 0 || game.remaining < 30f) "Your rhythm round will be erased." else null)
+    fun tap(column: Int) {
+        if (!running.value || game.ended) return
+        val previous = game.score
+        game = game.tap(column, 3)
+        if (sound && game.score > previous) {
+            try { tone.play(column) }
+            catch (failure: IllegalStateException) { error = failure.message; tone.stop() }
+            catch (failure: IllegalArgumentException) { error = "Sound unavailable: ${failure.message}"; tone.stop() }
+            catch (failure: UnsupportedOperationException) { error = "Sound unavailable: ${failure.message}"; tone.stop() }
+        }
     }
-    DisposableEffect(Unit) { onDispose { track.value?.release() } }
-    LaunchedEffect(running.value, game.ended) {
-        if (!running.value) track.value?.pause()
-        while (running.value && !game.ended) { delay(100); game = game.step(.1f) }
+    DisposableEffect(tone) { onDispose { tone.stop() } }
+    LaunchedEffect(running.value, game.ended, practice) {
+        if (!running.value) tone.stop()
+        while (running.value && !game.ended && !practice) { delay(100); game = game.step(.1f) }
     }
-    ToolColumn {
-        ResultCard(if (game.ended) "Round complete" else "Rhythm Tiles", "${game.score} tiles · ${game.remaining.toInt()} seconds")
-        Canvas(gameBoardModifier().pointerInput(running.value) {
-            detectTapGestures { point ->
-                if (running.value && !game.ended) {
-                    val previous = game.score
-                    game = game.tap((point.x / size.width * 4).toInt().coerceIn(0, 3), (point.y / size.height * 4).toInt().coerceIn(0, 3))
-                    if (game.score > previous) note()
+    GamePage(
+        pause = { running.value = false },
+        modifier = Modifier.onPreviewKeyEvent { event ->
+            val column = when (event.key) { Key.One -> 0; Key.Two -> 1; Key.Three -> 2; Key.Four -> 3; else -> null }
+            if (column != null && event.type == KeyEventType.KeyDown) { tap(column); true } else false
+        },
+        help = "Play the highlighted bottom-row column. A wrong column ends the round. Use touch, Tab/D-pad and activation, or keyboard keys 1–4. Practice removes the timer; changing modes starts a new round.",
+        status = {
+            Text(if (game.ended) "Round complete · ${game.score}" else "${game.score} tiles", style = MaterialTheme.typography.titleLarge)
+            Text(if (practice) "Practice · No timer" else "${game.remaining.toInt()} seconds", color = colors.secondary)
+        },
+        board = { modifier ->
+            Column(modifier) {
+                repeat(4) { row ->
+                    Row(Modifier.weight(1f).fillMaxWidth()) {
+                        repeat(4) { column ->
+                            val highlighted = game.rows[row] == column
+                            val semantics = if (row == 3) Modifier.semantics {
+                                contentDescription = "Column ${column + 1}, ${if (highlighted) "play tile" else "empty"}"
+                                role = Role.Button
+                            }.clickable(enabled = running.value && !game.ended) { tap(column) } else Modifier.clearAndSetSemantics {}
+                            Surface(Modifier.weight(1f).fillMaxHeight().padding(2.dp).then(semantics),
+                                color = if (highlighted) { if (row == 3) colors.primary else colors.secondary } else colors.surfaceContainerLow,
+                                shape = MaterialTheme.shapes.small,
+                            ) { Box(contentAlignment = Alignment.Center) { if (highlighted) Text("♪", color = if (row == 3) colors.onPrimary else colors.onSecondary) } }
+                        }
+                    }
                 }
             }
-        }) {
-            val width = size.width / 4
-            val height = size.height / 4
-            repeat(4) { row -> repeat(4) { column ->
-                drawRect(if (game.rows[row] == column) { if (row == 3) colors.primary else colors.secondary } else colors.surfaceContainerLow,
-                    Offset(column * width + 2, row * height + 2), Size(width - 4, height - 4))
-            } }
-        }
-        Row { Text("Procedural piano tones", Modifier.weight(1f)); Switch(sound, { sound = it; if (!it) track.value?.pause() }) }
-        Text("Tap the colored tile in the bottom row. A wrong tile ends the round. Thirty seconds, original generated notes, no downloaded music.")
-        ErrorText(error)
-        GameActions(running, game.ended) { game = RhythmTilesGame() }
-    }
+        },
+        controls = {
+            Row(Modifier.fillMaxWidth()) {
+                repeat(4) { column ->
+                    OutlinedButton(enabled = running.value, onClick = { tap(column) }, contentPadding = PaddingValues(4.dp), modifier = Modifier.weight(1f).semantics {
+                        contentDescription = "Play column ${column + 1}${if (game.rows.last() == column) ", highlighted" else ""}"
+                    }) { Text((column + 1).toString()) }
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Practice · starts a new round", Modifier.weight(1f))
+                Switch(practice, { practice = it; running.value = false; game = RhythmTilesGame(); error = null },
+                    modifier = Modifier.semantics { contentDescription = "Untimed practice" })
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Piano sound", Modifier.weight(1f)); Switch(sound, { sound = it; error = null; if (!it) tone.stop() },
+                    modifier = Modifier.semantics { contentDescription = "Piano sound" })
+            }
+            ErrorText(error)
+        },
+        footer = { GameActions(running, game.ended) { game = RhythmTilesGame(); error = null } },
+    )
 }

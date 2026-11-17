@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import app.sadhan.core.currencies
 import app.sadhan.core.currencyRate
 import app.sadhan.core.money
+import app.sadhan.core.toInputDoubleOrNull
 import app.sadhan.data.CurrencyRepository
 import app.sadhan.data.ExchangeRates
 import app.sadhan.ui.Choice
@@ -54,7 +55,7 @@ fun CurrencyScreen() {
         rates?.let { table ->
             var failure: String? = null
             val converted = try {
-                val value = amount.toDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid amount")
+                val value = amount.toInputDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid amount")
                 require(value.isFinite() && value >= 0) { "Enter a non-negative finite amount" }
                 val result = value * currencyRate(table.usdRates, from, to)
                 require(result.isFinite()) { "Amount is too large" }

@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import app.sadhan.core.money
+import app.sadhan.core.toInputDoubleOrNull
+import app.sadhan.core.toInputIntOrNull
 import app.sadhan.ui.ErrorText
 import app.sadhan.ui.Input
 import app.sadhan.ui.ResultCard
@@ -16,9 +18,9 @@ fun TipSplitScreen() {
     var bill by remember { mutableStateOf("") }
     var tip by remember { mutableStateOf("10") }
     var people by remember { mutableStateOf("2") }
-    val amount = bill.toDoubleOrNull()
-    val percent = tip.toDoubleOrNull()
-    val count = people.toIntOrNull()
+    val amount = bill.toInputDoubleOrNull()
+    val percent = tip.toInputDoubleOrNull()
+    val count = people.toInputIntOrNull()
     val valid = amount != null && amount.isFinite() && amount >= 0 &&
         percent != null && percent.isFinite() && percent >= 0 && count != null && count > 0
     ToolColumn {

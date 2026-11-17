@@ -8,8 +8,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.dp
 import app.sadhan.games.*
-import app.sadhan.ui.ResultCard
-import app.sadhan.ui.ToolColumn
+import app.sadhan.ui.ReportTabWork
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -17,29 +16,36 @@ import kotlinx.coroutines.delay
 fun BlockDropScreen() {
     var game by remember { mutableStateOf(BlockDropGame.new()) }
     val running = rememberGameRunning()
+    ReportTabWork("blocks", if (running.value || game.score > 0 || game.piece.y > 0 || game.board.any { it != 0 }) "Your Block Drop progress will be erased." else null)
     val colors = listOf(MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.primary, androidx.compose.ui.graphics.Color(0xFFA68CE8), androidx.compose.ui.graphics.Color(0xFF62B892), androidx.compose.ui.graphics.Color(0xFFD66B86), androidx.compose.ui.graphics.Color(0xFF718BD2), androidx.compose.ui.graphics.Color(0xFFD4B76B))
     val background = MaterialTheme.colorScheme.surfaceContainerLow
     LaunchedEffect(running.value, game.ended, game.level) {
         while (running.value && !game.ended) { delay((700L - (game.level - 1) * 55).coerceAtLeast(100)); game = game.step() }
     }
-    ToolColumn {
-        ResultCard(if (game.ended) "Game over" else "Block Drop", "${game.score} points · ${game.lines} lines · Level ${game.level}")
-        Canvas(gameBoardModifier()) {
+    GamePage(
+        pause = { running.value = false },
+        help = "Rotate and place blocks to clear full rows. Drop places a piece immediately. The next piece comes from a shuffled seven-piece bag.",
+        status = {
+            Text(if (game.ended) "Game over · ${game.score}" else "${game.score} points", style = MaterialTheme.typography.titleLarge)
+            Text("${game.lines} lines · Level ${game.level} · Next ${listOf("Bar", "Square", "Tee", "Zig", "Zag", "Hook", "Corner")[game.next]}", style = MaterialTheme.typography.labelLarge)
+        },
+        board = { modifier -> Canvas(modifier) {
             val cell = minOf(size.width / 10, size.height / 18)
             val origin = center - Offset(cell * 5, cell * 9)
             drawRect(background, origin, Size(cell * 10, cell * 18))
             fun block(x: Int, y: Int, type: Int) = drawRect(colors[(type - 1) % colors.size], origin + Offset(x * cell + 1, y * cell + 1), Size(cell - 2, cell - 2))
             game.board.forEachIndexed { index, value -> if (value > 0) block(index % 10, index / 10, value) }
             if (!game.ended) game.piece.cells.forEach { block(game.piece.x + it.x, game.piece.y + it.y, game.piece.type + 1) }
-        }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(enabled = running.value, onClick = { game = game.move(-1) }) { Text("←") }
-            OutlinedButton(enabled = running.value, onClick = { game = game.rotate() }) { Text("Rotate") }
-            OutlinedButton(enabled = running.value, onClick = { game = game.move(1) }) { Text("→") }
-            OutlinedButton(enabled = running.value, onClick = { game = game.step() }) { Text("↓") }
-            Button(enabled = running.value, onClick = { game = game.drop() }) { Text("Drop") }
-        }
-        Text("Next: ${listOf("Bar", "Square", "Tee", "Zig", "Zag", "Hook", "Corner")[game.next]}. Clear full rows. Original 10 × 18 falling-block game with seven-piece bags and wall kicks.")
-        GameActions(running, game.ended) { game = BlockDropGame.new() }
-    }
+        } },
+        controls = {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(enabled = running.value, onClick = { game = game.move(-1) }) { Text("Left") }
+                OutlinedButton(enabled = running.value, onClick = { game = game.rotate() }) { Text("Rotate") }
+                OutlinedButton(enabled = running.value, onClick = { game = game.move(1) }) { Text("Right") }
+                OutlinedButton(enabled = running.value, onClick = { game = game.step() }) { Text("Down") }
+                Button(enabled = running.value, onClick = { game = game.drop() }) { Text("Drop") }
+            }
+        },
+        footer = { GameActions(running, game.ended) { game = BlockDropGame.new() } },
+    )
 }

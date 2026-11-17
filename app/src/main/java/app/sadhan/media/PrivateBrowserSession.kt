@@ -22,7 +22,8 @@ class PrivateBrowserTab(context: Context) {
         private set
     var error by mutableStateOf<String?>(null)
         private set
-    private var destroyed = false
+    var stopped by mutableStateOf(false)
+        private set
     val view = WebView(context).apply {
         importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         settings.apply {
@@ -44,7 +45,7 @@ class PrivateBrowserTab(context: Context) {
         clearFormData()
         setDownloadListener { _, _, _, _, _ -> error = "Downloads are disabled in private tabs" }
         webChromeClient = object : WebChromeClient() {
-            override fun onReceivedTitle(view: WebView, value: String?) { this@PrivateBrowserTab.title = value?.take(100) ?: "Private tab" }
+            override fun onReceivedTitle(view: WebView, value: String?) { if (!stopped) this@PrivateBrowserTab.title = value?.take(100) ?: "Private tab" }
             override fun onPermissionRequest(request: PermissionRequest) {
                 request.deny()
                 error = "Website camera and microphone requests are blocked"
@@ -68,9 +69,9 @@ class PrivateBrowserTab(context: Context) {
                 }
                 return false
             }
-            override fun onPageStarted(view: WebView, value: String, favicon: Bitmap?) { this@PrivateBrowserTab.url = value; loading = true; error = null }
+            override fun onPageStarted(view: WebView, value: String, favicon: Bitmap?) { if (!stopped) { this@PrivateBrowserTab.url = value; loading = true; error = null } }
             override fun onPageFinished(view: WebView, value: String) {
-                this@PrivateBrowserTab.url = value; loading = false; back = view.canGoBack(); forward = view.canGoForward()
+                if (!stopped) { this@PrivateBrowserTab.url = value; loading = false; back = view.canGoBack(); forward = view.canGoForward() }
             }
             override fun onReceivedError(view: WebView, request: WebResourceRequest, failure: WebResourceError) {
                 if (request.isForMainFrame) { error = "Page could not load: ${failure.description}"; loading = false }
@@ -90,26 +91,34 @@ class PrivateBrowserTab(context: Context) {
     }
 
     fun load(address: String) {
-        check(!destroyed) { "Close this stopped tab and open a new one" }
+        check(!stopped) { "This renderer has stopped. Open a replacement tab." }
         error = null
         view.loadUrl(address)
     }
 
     fun pause() {
-        if (!destroyed) {
+        if (!stopped) {
             view.evaluateJavascript("document.querySelectorAll('video,audio').forEach(function(media){media.pause();})", null)
             view.onPause()
         }
     }
 
-    fun resume() { if (!destroyed) view.onResume() }
+    fun resume() { if (!stopped) view.onResume() }
+    fun goBack() { check(!stopped) { "This renderer has stopped. Open a replacement tab." }; view.goBack() }
+    fun goForward() { check(!stopped) { "This renderer has stopped. Open a replacement tab." }; view.goForward() }
+    fun reload() { check(!stopped) { "This renderer has stopped. Open a replacement tab." }; view.reload() }
     fun close() {
-        if (!destroyed) {
-            destroyed = true
+        if (!stopped) {
+            stopped = true
+            loading = false
+            back = false
+            forward = false
             view.stopLoading()
             view.clearHistory()
             view.clearFormData()
             view.clearCache(true)
+            val parent = view.parent
+            if (parent is android.view.ViewGroup) parent.removeView(view)
             view.destroy()
         }
     }

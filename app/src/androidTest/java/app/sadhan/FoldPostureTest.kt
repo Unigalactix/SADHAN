@@ -27,8 +27,7 @@ class FoldPostureTest {
             .putBoolean("updates", false).putString("theme", "DARK").commit()
         val scenario = ActivityScenario.launch(MainActivity::class.java)
         try {
-            compose.onNodeWithTag("tool-list").performScrollToNode(hasText("Calculator"))
-            compose.onNode(hasText("Calculator") and hasAnyAncestor(hasTestTag("tool-list"))).performClick()
+            openCatalogTool(compose, "Calculator")
             compose.onNodeWithText("Expression").performTextInput("99+1")
             var before: MainActivity? = null
             scenario.onActivity { before = it }

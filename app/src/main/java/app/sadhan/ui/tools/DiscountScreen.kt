@@ -4,6 +4,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import app.sadhan.core.discount
 import app.sadhan.core.money
+import app.sadhan.core.toInputDoubleOrNull
 import app.sadhan.ui.*
 
 @Composable
@@ -18,7 +19,7 @@ fun DiscountScreen() {
         if (price.isNotBlank()) {
             var error: String? = null
             val result = try {
-                discount(price.toDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid price"), rate.toDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid discount"), tax.toDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid tax rate"))
+                discount(price.toInputDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid price"), rate.toInputDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid discount"), tax.toInputDoubleOrNull() ?: throw IllegalArgumentException("Enter a valid tax rate"))
             } catch (e: IllegalArgumentException) { error = e.message; null }
             ErrorText(error)
             result?.let {

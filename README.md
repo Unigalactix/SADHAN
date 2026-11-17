@@ -14,6 +14,16 @@ device; this illustration is not a device screenshot.*
 > [Releases](https://github.com/Unigalactix/SADHAN/releases/latest).
 > The build specification and implementation notes live in [SPEC.md](SPEC.md).
 
+**Quality candidate:** v1.2.0-rc.1 adds focused Tools/Media/Games navigation,
+confirmed workspace closes, progressive RAM-only libraries, playback and
+browser recovery fixes, localized number entry and adaptive game controls.
+It is a prerelease; v1.1.0 remains stable. The implementation and honest
+device/human acceptance gates are tracked in [QUALITY.md](QUALITY.md).
+See the [actual Light/Dark master-screen captures](QUALITY.md#six-master-screen-hand-off),
+separate from the concept artwork above.
+The candidate's higher versionCode prevents an in-place downgrade to v1.1.0;
+returning to that older stable build requires uninstalling and loses Settings.
+
 ## Download
 
 1. Download the latest **SADHAN APK** from [Releases](https://github.com/Unigalactix/SADHAN/releases/latest).
@@ -101,6 +111,9 @@ transitions.
 
 No borrowed game characters, artwork, music, ROMs or branded game assets.
 
+The quality candidate adds an untimed, keyboard-accessible Rhythm Tiles
+practice mode and pane-constrained game boards with rules and pinned actions.
+
 **About developer** — Rajesh Kodaganti (Rugved), with links to
 [portfolio](https://rajeshkodaganti.com),
 [LinkedIn](https://www.linkedin.com/in/rajesh-kodaganti-323118215/) and
@@ -183,6 +196,18 @@ Validation:
 The device tests need a connected Android 10+ device or emulator. Source is
 organized into per-tool screens with shared `core`, `data`, `media`, `ui/theme`
 and `update` packages; no database or tool persistence is used.
+
+[Android quality CI](.github/workflows/android-quality.yml) builds unsigned
+test artifacts and preserves reports and actual emulator master-view captures.
+CI artifacts are not permanent signed releases. Release-candidate evidence and
+remaining physical-device/human checks are listed in [QUALITY.md](QUALITY.md).
+
+### Reporting problems
+
+Use **About > Report an issue** or the
+[GitHub issue form](https://github.com/Unigalactix/SADHAN/issues/new/choose).
+No diagnostic or tool contents are attached automatically. Use made-up sample
+inputs and remove private URLs, filenames and personal screenshots.
 
 The initial v1.0.0 release was validated with 10 JVM tests, release lint and
 eight Android 15/API 35 device tests. The v1.1 checks include 24 JVM rule tests,

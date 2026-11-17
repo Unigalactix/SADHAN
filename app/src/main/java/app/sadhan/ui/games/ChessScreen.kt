@@ -12,15 +12,19 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import app.sadhan.games.*
 import app.sadhan.ui.ErrorText
-import app.sadhan.ui.ToolColumn
+import app.sadhan.ui.ReportTabWork
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChessScreen() {
     var game by remember { mutableStateOf(ChessGame.new()) }
     val history = remember { mutableStateListOf<ChessGame>() }
+    ReportTabWork("chess", if (history.isNotEmpty()) "Your chess game and undo history will be erased." else null)
     var selected by remember { mutableStateOf<Int?>(null) }
     var promotion by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var finished by remember { mutableStateOf<String?>(null) }
@@ -35,16 +39,20 @@ fun ChessScreen() {
         else -> null
     }
     val ended = finished ?: automatic
+    val fontScale = LocalDensity.current.fontScale
     fun play(from: Int, to: Int, kind: ChessKind = ChessKind.QUEEN) {
         try {
             val next = game.move(from, to, kind)
             history.add(game); game = next; selected = null; promotion = null; error = null
         } catch (e: IllegalArgumentException) { error = e.message }
     }
-    ToolColumn {
+    GamePage(
+        help = "Local two-player chess. Select your piece and a highlighted legal square. Castling, en passant, promotion, checkmate, stalemate and draw rules are supported. Claim a threefold/50-move draw when available.",
+        status = {
         Text(ended ?: "${game.turn.name.lowercase().replaceFirstChar(Char::uppercase)} to move${if (check) " — check" else ""}", style = MaterialTheme.typography.titleLarge)
-        BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            val boardSize = maxWidth.coerceAtMost(480.dp)
+        },
+        board = { modifier -> BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+            val boardSize = minOf(maxWidth, maxHeight, 480.dp)
             val square = boardSize / 8
             Column(Modifier.size(boardSize)) {
                 repeat(8) { row ->
@@ -66,7 +74,7 @@ fun ChessScreen() {
                                 border = if (index in legal) BorderStroke(2.dp, MaterialTheme.colorScheme.secondary) else null,
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
-                                    if (piece != null) Text(piece.glyph, fontSize = (square.value * .7).sp, color = if (piece.side == ChessSide.WHITE) Color.White else Color(0xFF091728),
+                                    if (piece != null) Text(piece.glyph, fontSize = (square.value * .7 / fontScale).sp, color = if (piece.side == ChessSide.WHITE) Color.White else Color(0xFF091728),
                                         style = MaterialTheme.typography.bodyLarge.copy(shadow = androidx.compose.ui.graphics.Shadow(Color.Black, blurRadius = 2f)))
                                     else if (index in legal) Text("•", color = Color(0xFF094E66))
                                 }
@@ -75,18 +83,19 @@ fun ChessScreen() {
                     }
                 }
             }
-        }
-        ErrorText(error)
+        } },
+        controls = { ErrorText(error) },
+        footer = {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(enabled = history.isNotEmpty(), onClick = { game = history.removeAt(history.lastIndex); selected = null; finished = null }) { Text("Undo") }
             OutlinedButton(enabled = ended == null && game.canClaimDraw, onClick = { finished = "Draw claimed" }) { Text("Claim draw") }
             OutlinedButton(onClick = { game = ChessGame.new(); history.clear(); selected = null; finished = null; error = null }) { Text("New game") }
         }
-        Text("Local two-player chess. Legal-move highlighting, castling, en passant, promotion, checkmate, stalemate and draw rules. No engine, accounts or saved games.", style = MaterialTheme.typography.bodySmall)
-    }
+        },
+    )
     promotion?.let { (from, to) ->
         AlertDialog(onDismissRequest = { promotion = null }, title = { Text("Promote pawn") }, text = {
-            Column { listOf(ChessKind.QUEEN, ChessKind.ROOK, ChessKind.BISHOP, ChessKind.KNIGHT).forEach { kind ->
+            Column(Modifier.verticalScroll(rememberScrollState())) { listOf(ChessKind.QUEEN, ChessKind.ROOK, ChessKind.BISHOP, ChessKind.KNIGHT).forEach { kind ->
                 TextButton(onClick = { play(from, to, kind) }) { Text(kind.name.lowercase().replaceFirstChar(Char::uppercase)) }
             } }
         }, confirmButton = {})
