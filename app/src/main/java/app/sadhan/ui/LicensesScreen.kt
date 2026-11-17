@@ -14,7 +14,7 @@ fun LicensesScreen() {
     ToolColumn {
         Text("Open-source licenses", style = MaterialTheme.typography.headlineSmall)
         Text(mit, style = MaterialTheme.typography.bodySmall)
-        Text("AndroidX (Core, Activity, Lifecycle, Compose, Navigation, CameraX, Startup, ProfileInstaller), Material icons, Kotlin, coroutines and ZXing: Apache License 2.0. Copyright The Android Open Source Project, Google, JetBrains s.r.o., Kotlin contributors and ZXing authors respectively.")
+        Text("AndroidX (Core, Activity, Lifecycle, Compose, Navigation, CameraX, WindowManager, Media3, Startup, ProfileInstaller), Google Guava, Material icons, Kotlin, coroutines and ZXing: Apache License 2.0. Copyright The Android Open Source Project, Google, JetBrains s.r.o., Kotlin contributors and ZXing authors respectively.")
         Text(apache, style = MaterialTheme.typography.bodySmall)
     }
 }

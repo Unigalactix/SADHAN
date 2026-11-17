@@ -17,8 +17,8 @@ fun AboutScreen(updatesEnabled: Boolean, updates: UpdateState, onDeveloper: () -
     val scope = rememberCoroutineScope()
     ToolColumn {
         ResultCard("SADHAN", "v${BuildConfig.VERSION_NAME}")
-        Text("No ads. No tracking. No accounts. Nothing you type in a tool is saved.")
-        Text("A daily toolbox, built to do small things properly.")
+        Text("SADHAN adds no ads, trackers or accounts. Open tabs live in memory; no tool history is written.")
+        Text("27 tools, seven original games, and a workspace that is yours to use.")
         if (updatesEnabled) {
             updates.update?.let { UpdateCard(it) }
             Button(enabled = !updates.checking, onClick = { scope.launch { updates.check() } }) {
@@ -30,9 +30,9 @@ fun AboutScreen(updatesEnabled: Boolean, updates: UpdateState, onDeveloper: () -
         OutlinedButton(onClick = { openUrl(context, UpdateChecker.REPOSITORY) }) { Text("Source code on GitHub") }
         Text("MIT License · Copyright 2026 Rajesh Kodaganti")
         OutlinedButton(onClick = { openUrl(context, "${UpdateChecker.REPOSITORY}/blob/main/LICENSE") }) { Text("Read MIT license") }
-        Text("Built with AndroidX / Jetpack Compose and CameraX (Apache 2.0), Kotlin (Apache 2.0) and ZXing (Apache 2.0).")
+        Text("Built with AndroidX / Jetpack Compose, CameraX, Media3, WindowManager, Kotlin and ZXing (Apache 2.0).")
         OutlinedButton(onClick = onLicenses) { Text("Open-source licenses") }
-        Text("Weather: Open-Meteo (CC BY 4.0). Currency reference data: Frankfurter / ECB. YouTube is a third-party service with its own ads, terms and privacy policy.")
+        Text("Weather: Open-Meteo (CC BY 4.0). Rates: Frankfurter / ECB. Websites and YouTube have their own ads, terms and privacy policies. Private browsing is not anonymity.")
         OutlinedButton(onClick = { openUrl(context, "${UpdateChecker.REPOSITORY}/blob/main/THIRD_PARTY_NOTICES.md") }) { Text("Third-party notices") }
     }
 }

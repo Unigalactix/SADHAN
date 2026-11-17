@@ -3,6 +3,11 @@ package app.sadhan.ui.tools
 import android.os.SystemClock
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.ui.Modifier
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -17,6 +22,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import app.sadhan.ui.ResultCard
 import app.sadhan.ui.ToolColumn
+import app.sadhan.ui.InstrumentDial
+import app.sadhan.ui.LocalToolVisible
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -25,6 +32,7 @@ fun elapsedLabel(millis: Long): String {
     return String.format(Locale.ROOT, "%02d:%02d:%02d.%02d", hundredths / 360000, hundredths / 6000 % 60, hundredths / 100 % 60, hundredths % 100)
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StopwatchScreen() {
     var running by remember { mutableStateOf(false) }
@@ -32,15 +40,17 @@ fun StopwatchScreen() {
     var started by remember { mutableLongStateOf(0L) }
     var elapsed by remember { mutableLongStateOf(0L) }
     val laps = remember { mutableStateListOf<Long>() }
-    LaunchedEffect(running) {
-        while (running) {
+    val visible = LocalToolVisible.current
+    LaunchedEffect(running, visible) {
+        while (running && visible) {
             elapsed = accumulated + SystemClock.elapsedRealtime() - started
             delay(31)
         }
     }
     ToolColumn {
+        InstrumentDial((elapsed % 60_000) / 1000f, Modifier.fillMaxWidth().height(260.dp))
         ResultCard("Stopwatch", elapsedLabel(elapsed))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
                 if (running) {
                     accumulated += SystemClock.elapsedRealtime() - started
@@ -53,7 +63,7 @@ fun StopwatchScreen() {
             }, enabled = running && laps.size < 100) { Text("Lap") }
             OutlinedButton(onClick = { running = false; accumulated = 0; elapsed = 0; laps.clear() }) { Text("Reset") }
         }
-        Text("Session only. Leaving this tool resets it.")
+        Text("Session only, up to 100 laps. Close this tab to reset it.")
         laps.forEachIndexed { index, lap -> Text("Lap ${index + 1}   ${elapsedLabel(lap)}") }
     }
 }

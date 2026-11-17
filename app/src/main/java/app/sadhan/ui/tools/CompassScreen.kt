@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import app.sadhan.ui.ErrorText
@@ -34,6 +36,8 @@ import kotlin.math.sin
 @Composable
 fun CompassScreen() {
     val context = LocalContext.current
+    val foreground = MaterialTheme.colorScheme.onSurface.toArgb()
+    val accent = MaterialTheme.colorScheme.primary.toArgb()
     val manager = remember { context.getSystemService(SensorManager::class.java) }
     val rotation = remember { manager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) }
     val sensors = remember {
@@ -79,7 +83,7 @@ fun CompassScreen() {
                     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; textSize = 22.dp.toPx() }
                     listOf("N", "E", "S", "W").forEachIndexed { index, text ->
                         val theta = index * PI / 2 - PI / 2
-                        paint.color = if (index == 0) android.graphics.Color.rgb(255, 179, 0) else android.graphics.Color.WHITE
+                        paint.color = if (index == 0) accent else foreground
                         drawContext.canvas.nativeCanvas.drawText(text, center.x + (cos(theta) * radius * .72).toFloat(), center.y + (sin(theta) * radius * .72).toFloat() + paint.textSize / 3, paint)
                     }
                     drawLine(Amber, center, Offset(center.x, center.y - radius * .5f), 5.dp.toPx())

@@ -35,8 +35,11 @@ class AppSmokeTest {
     @After fun close() { scenario.close() }
 
     private fun openTool(title: String) {
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(title))
-        compose.onNodeWithText(title).performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool-list").fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag("tool-list").performScrollToNode(hasText(title))
+        val target = hasText(title) and hasAnyAncestor(hasTestTag("tool-list"))
+        compose.waitUntil(10_000) { compose.onAllNodes(target).fetchSemanticsNodes().size == 1 && compose.onNode(target).isDisplayed() }
+        compose.onNode(target).performClick()
     }
 
     @Test fun everyToolOpensAndInternetGatesWork() {
@@ -46,23 +49,27 @@ class AppSmokeTest {
         toolCatalog.forEach { tool ->
             openTool(tool.title)
             compose.onAllNodesWithText(tool.title)[0].assertIsDisplayed()
-            if (tool.route in listOf("weather", "currency", "youtube")) {
+            if (tool.route in listOf("weather", "currency", "youtube", "browser")) {
                 compose.onNodeWithText("Turned off in Settings").assertIsDisplayed()
             }
-            compose.onNodeWithContentDescription("Back").performClick()
+            compose.onNodeWithContentDescription("Close ${tool.title} tab").performClick()
         }
     }
 
-    @Test fun scratchpadErasesOnLeavingAndCalculatorEvaluates() {
+    @Test fun toolTabsRetainStateUntilClosedAndCalculatorEvaluates() {
         openTool("Scratchpad")
         compose.onNodeWithText("Temporary note").performTextInput("private temporary note")
         compose.onNodeWithContentDescription("Back").performClick()
         openTool("Scratchpad")
+        compose.onNodeWithText("private temporary note").assertExists()
+        compose.onNodeWithContentDescription("Close Scratchpad tab").performClick()
+        openTool("Scratchpad")
         compose.onNodeWithText("private temporary note").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithContentDescription("Close Scratchpad tab").performClick()
         openTool("Calculator")
         compose.onNodeWithText("Expression").performTextInput("2*(3+4)")
         compose.onNodeWithText("Calculate").performClick()
+        compose.waitUntil(5_000) { compose.onNodeWithText("2*(3+4) = 14").isDisplayed() }
         compose.onNodeWithText("2*(3+4) = 14").assertIsDisplayed()
     }
 

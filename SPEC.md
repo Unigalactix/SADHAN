@@ -106,3 +106,71 @@ user actions; temporary sharing/update files use app cache, not tool history.
 ## 9. Out of scope for v1
 
 Widgets, notifications/reminders, cloud anything, accounts, saved notes/history of any kind, AI features, iOS/desktop versions.
+
+## 10. v1.1.0 — owner-requested workspace and premium upgrade
+
+This section supersedes conflicting v1.0 UI/state details above. Identity stays
+`app.sadhan`, minSdk 29, target/compileSdk 35; versionCode is 2. Sign with the
+same permanent SADHAN certificate and publish `SADHAN-v1.1.0.apk`.
+
+### Appearance and adaptive workspace
+
+- System is the default theme; Light and Dark are saved Settings.
+- Follow the supplied visual references: frosted light/navy glass surfaces,
+  orange primary actions, cyan readouts, readable contrast and restrained
+  transitions. No external fonts/images/telemetry dependencies.
+- Remove the portrait lock. Handle window configuration changes in the
+  Compose activity so visible tool state stays in RAM during resizing,
+  rotation and fold/unfold. WindowManager reports separating hinges; controls
+  stay in a usable pane. Larger screens offer a companion tool.
+- Up to six unique tool/game tabs remain composed in memory. Switching tabs
+  keeps work; closing a tab destroys it. No workspace restore, saved queues,
+  scores, notes, browser history or document index. Hidden camera/sensor/video
+  sessions stop; games pause. Music may continue between tabs only while the
+  app remains foregrounded. No background-service permissions were approved.
+
+### Local media and documents
+
+- Media3 ExoPlayer + PlayerView replace the basic platform wrappers for queue
+  controls, previous/next, shuffle, repeat off/all/one, speed, seeking,
+  embedded audio/subtitle tracks, external subtitles, ratio and fullscreen.
+  SRT/VTT/SSA/ASS/TTML support and codec support depend on the file/decoder.
+  This does not claim complete VLC feature/codec parity.
+- The owner explicitly requested storage scans. Add runtime
+  `READ_MEDIA_AUDIO`, `READ_MEDIA_VIDEO`, `READ_MEDIA_VISUAL_USER_SELECTED`
+  and legacy `READ_EXTERNAL_STORAGE` with maxSdk 32. File pickers still work
+  without these. Do not request MANAGE_EXTERNAL_STORAGE.
+- PDF/document scans use an explicitly chosen Storage Access Framework tree.
+  Persist its read grant and URI as a Settings choice only. Rescan metadata
+  into RAM. Other document formats are opened by a chosen installed viewer.
+- Media3 1.8.0 is a justified AndroidX dependency for robust local playback and
+  track selection; it compiles against SDK 35. WindowManager 1.3.0 provides
+  hinge awareness. No Media3 service/session/network or telemetry SDK is added.
+  Remove the library's optional ACCESS_NETWORK_STATE permission; playback
+  accepts only local content/file URIs.
+
+### YouTube and private browser
+
+- YouTube keeps a BETA chip/banner, separate Search/Paste controls, official
+  mobile-site results and in-app result selection into the official embed.
+- The owner requested an incognito-default browser. Its BETA implementation
+  supports up to eight in-memory HTTPS tabs, back/forward/reload, disabled
+  cookies/DOM/form storage, disabled local-file/content access, blocked
+  website device permissions and downloads, and cleanup when its tool tab
+  closes. No persisted tabs/history.
+- State clearly that websites can see IP/fingerprint information and that
+  WebView/Android operational data may remain. Do not promise anonymity,
+  forensic erasure or full Chrome incognito isolation. Browser has its own
+  Internet toggle beneath the master switch.
+
+### Additional utilities and games
+
+There are now 27 tools and seven original games. Add Percentage, Discount &
+Tax, Random Picker/Dice and Secure Password Generator (SecureRandom, 12–64
+characters, at least one per chosen class, sensitive clipboard flag).
+
+Add Snake, draw-one Klondike Solitaire, local two-player legal Chess, Pixel
+Runner, Lane Racer, Rhythm Tiles and Block Drop. Use only original procedural
+visuals/audio and generic mechanics: no ROMs or copied Mario/Tetris branding,
+characters, artwork or music. Scores/progress live only in their open tab.
+Game logic belongs in pure Kotlin `games/`; native screens in `ui/games/`.

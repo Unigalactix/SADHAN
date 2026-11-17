@@ -1,122 +1,92 @@
 package app.sadhan.ui.tools
 
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
-import android.media.AudioManager
-import android.media.MediaPlayer
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
+import app.sadhan.media.LibraryItem
 import app.sadhan.media.documentName
-import app.sadhan.ui.ErrorText
-import app.sadhan.ui.ResultCard
-import app.sadhan.ui.ToolColumn
-import kotlinx.coroutines.delay
+import app.sadhan.media.rememberPlaybackSession
+import app.sadhan.ui.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 
 @Composable
 fun MusicPlayerScreen() {
     val context = LocalContext.current
-    val owner = LocalLifecycleOwner.current
-    val audioManager = remember { context.getSystemService(AudioManager::class.java) }
-    var player by remember { mutableStateOf<MediaPlayer?>(null) }
-    var title by remember { mutableStateOf("Choose a local audio file") }
-    var ready by remember { mutableStateOf(false) }
-    var playing by remember { mutableStateOf(false) }
-    var position by remember { mutableFloatStateOf(0f) }
-    var duration by remember { mutableFloatStateOf(0f) }
+    val scope = rememberCoroutineScope()
+    val session = rememberPlaybackSession(keepPlayingInApp = true)
     var error by remember { mutableStateOf<String?>(null) }
-    val attributes = remember { AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build() }
-    val focus = remember {
-        AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setAudioAttributes(attributes).setOnAudioFocusChangeListener { change ->
-            if (change <= 0 && ready) { player?.pause(); playing = false }
-        }.build()
-    }
-    fun release() {
-        ready = false
-        playing = false
-        player?.release()
-        player = null
-        audioManager.abandonAudioFocusRequest(focus)
-    }
-    fun load(uri: Uri) {
-        release()
-        error = null
-        position = 0f
-        duration = 0f
-        try {
-            title = documentName(context, uri)
-            val media = MediaPlayer()
-            player = media
-            media.setAudioAttributes(attributes)
-            media.setOnPreparedListener {
-                if (player === it) { duration = it.duration.toFloat().coerceAtLeast(0f); ready = true }
-            }
-            media.setOnCompletionListener { playing = false; position = duration }
-            media.setOnErrorListener { _, what, extra ->
-                error = "Cannot play this audio (code $what/$extra). Try a supported local file."
-                release()
-                true
-            }
-            media.setDataSource(context, uri)
-            media.prepareAsync()
-        } catch (e: IOException) { error = "Cannot open audio: ${e.message}"; release() }
-        catch (e: SecurityException) { error = "Audio access denied: ${e.message}"; release() }
-        catch (e: IllegalArgumentException) { error = "Unsupported audio: ${e.message}"; release() }
-    }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) load(uri) }
-    DisposableEffect(owner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP && ready) {
-                player?.pause()
-                playing = false
-                audioManager.abandonAudioFocusRequest(focus)
-            }
+    var tab by remember { mutableStateOf("Library") }
+    var artwork by remember { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(session.metadata.artworkData) {
+        val bytes = session.metadata.artworkData
+        artwork = if (bytes == null || bytes.size > 5_000_000) null else withContext(Dispatchers.IO) {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            var sample = 1
+            while (bounds.outWidth / sample > 512 || bounds.outHeight / sample > 512) sample *= 2
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
         }
-        owner.lifecycle.addObserver(observer)
-        onDispose { owner.lifecycle.removeObserver(observer); release() }
     }
-    LaunchedEffect(playing) {
-        while (playing) { position = player?.currentPosition?.toFloat() ?: 0f; delay(200) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) scope.launch {
+            error = null
+            try {
+                val items = withContext(Dispatchers.IO) { uris.map { LibraryItem(it, documentName(context, it)) } }
+                withContext(Dispatchers.Main.immediate) { session.load(items); tab = "Queue" }
+            } catch (e: IOException) { error = "Cannot read audio: ${e.message}" }
+            catch (e: SecurityException) { error = "Audio access denied: ${e.message}" }
+            catch (e: IllegalArgumentException) { error = e.message }
+        }
     }
     ToolColumn {
-        Text("On-device audio, no library scanning or history. Playback pauses in the background and stops when you leave.")
+        Surface(shape = MaterialTheme.shapes.extraLarge, tonalElevation = 0.dp) {
+            Box(
+                Modifier.fillMaxWidth().height(170.dp).background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.surfaceContainerLow))),
+                contentAlignment = Alignment.Center,
+            ) {
+                val image = artwork
+                if (image != null) Image(image.asImageBitmap(), "Embedded album artwork", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                else Icon(Icons.Default.MusicNote, null, Modifier.size(74.dp), tint = MaterialTheme.colorScheme.primary)
+                Text(if (session.playing) "NOW PLAYING" else "LOCAL AUDIO", Modifier.align(Alignment.BottomCenter).background(MaterialTheme.colorScheme.surface.copy(alpha = .85f)).padding(12.dp), style = MaterialTheme.typography.labelLarge)
+            }
+        }
         Button(onClick = { picker.launch(arrayOf("audio/*")) }) { Text("Choose audio") }
-        ResultCard("Local music player", title)
+        Text("Music can continue while you use other open tool tabs. It pauses when the app is backgrounded; closing this tab erases the queue.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         ErrorText(error)
-        if (ready) {
-            Text("${elapsedLabel(position.toLong()).substringBefore('.')} / ${elapsedLabel(duration.toLong()).substringBefore('.')}")
-            Slider(value = position.coerceIn(0f, duration.coerceAtLeast(1f)), onValueChange = { position = it; player?.seekTo(it.toInt()) }, valueRange = 0f..duration.coerceAtLeast(1f))
-            Button(onClick = {
-                if (playing) {
-                    player?.pause()
-                    playing = false
-                    audioManager.abandonAudioFocusRequest(focus)
-                } else if (audioManager.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-                    if (position >= duration) player?.seekTo(0)
-                    player?.start()
-                    playing = true
-                } else error = "Audio is in use by another app. Try again."
-            }) { Text(if (playing) "Pause" else "Play") }
-            OutlinedButton(onClick = { player?.pause(); player?.seekTo(0); playing = false; position = 0f; audioManager.abandonAudioFocusRequest(focus) }) { Text("Restart") }
-        } else if (player != null) Text("Preparing audio...")
+        PlaybackControls(session)
+        session.metadata.artist?.let { Text(it.toString(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        if (session.queue.isNotEmpty()) {
+            Choice("Playback speed", "${session.speed}×", listOf(.5f, .75f, 1f, 1.25f, 1.5f, 2f).map { "${it}×" }) {
+                session.player.setPlaybackSpeed(it.removeSuffix("×").toFloat())
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            FilterChip(selected = tab == "Library", onClick = { tab = "Library" }, label = { Text("Library") })
+            FilterChip(selected = tab == "Queue", onClick = { tab = "Queue" }, label = { Text("Queue (${session.queue.size})") })
+        }
+        if (tab == "Library") MediaLibrary(video = false) { items, index -> session.load(items, index, true) }
+        else {
+            Text("Up next", style = MaterialTheme.typography.titleMedium)
+            if (session.queue.isEmpty()) Text("Choose audio files or select a song from your library.")
+            LibraryList(session.queue) { _, index -> session.player.seekTo(index, 0); session.player.play() }
+        }
     }
 }

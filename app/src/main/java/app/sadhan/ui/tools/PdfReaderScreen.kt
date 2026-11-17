@@ -35,13 +35,19 @@ import androidx.compose.ui.unit.dp
 import app.sadhan.media.PdfDocument
 import app.sadhan.media.documentName
 import app.sadhan.ui.ErrorText
+import app.sadhan.ui.DocumentLibrary
+import app.sadhan.data.SettingsStore
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
 @Composable
-fun PdfReaderScreen() {
+fun PdfReaderScreen(store: SettingsStore) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var document by remember { mutableStateOf<PdfDocument?>(null) }
@@ -52,6 +58,7 @@ fun PdfReaderScreen() {
     var error by remember { mutableStateOf<String?>(null) }
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+    var library by remember { mutableStateOf(false) }
     fun display(index: Int) {
         val current = document ?: return
         scope.launch {
@@ -67,8 +74,8 @@ fun PdfReaderScreen() {
             finally { busy = false }
         }
     }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
+    fun open(uri: android.net.Uri) {
+        scope.launch {
             busy = true
             error = null
             bitmap = null
@@ -95,10 +102,12 @@ fun PdfReaderScreen() {
             finally { pending?.close(); busy = false }
         }
     }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) open(uri) }
     DisposableEffect(Unit) { onDispose { document?.close() } }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Read a local PDF. Pinch to zoom and drag to pan. No recent files or bookmarks are stored.")
         Button(enabled = !busy, onClick = { picker.launch(arrayOf("application/pdf")) }) { Text("Open PDF") }
+        OutlinedButton(enabled = !busy, onClick = { library = true }) { Text("PDF & document library") }
         Text(title)
         ErrorText(error)
         document?.let { pdf ->
@@ -107,6 +116,11 @@ fun PdfReaderScreen() {
                 Text("${page + 1} / ${pdf.pageCount}")
                 OutlinedButton(enabled = !busy && page + 1 < pdf.pageCount, onClick = { display(page + 1) }) { Text("Next") }
             }
+            if (library) AlertDialog(
+                onDismissRequest = { library = false }, title = { Text("Your documents") },
+                text = { Column(Modifier.verticalScroll(rememberScrollState())) { DocumentLibrary(store) { library = false; open(it) } } },
+                confirmButton = { TextButton(onClick = { library = false }) { Text("Done") } },
+            )
         }
         if (busy) Text("Rendering...")
         Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().pointerInput(Unit) {

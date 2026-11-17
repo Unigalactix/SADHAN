@@ -15,7 +15,7 @@ import app.sadhan.ui.ToolColumn
 fun ScratchpadScreen() {
     var text by remember { mutableStateOf("") }
     ToolColumn {
-        Text("Erases itself when you leave. Nothing here is saved.")
+        Text("Kept only in this open tab. Closing the tab erases it; nothing is saved to disk.")
         Input("Temporary note", text, { text = it }, singleLine = false)
         OutlinedButton(onClick = { text = "" }) { Text("Erase now") }
         if (text.isNotEmpty()) CopyButton(text)

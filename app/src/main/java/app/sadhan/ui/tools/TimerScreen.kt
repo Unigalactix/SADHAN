@@ -41,6 +41,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.sadhan.ui.ErrorText
 import app.sadhan.ui.ResultCard
 import app.sadhan.ui.ToolColumn
+import app.sadhan.ui.LocalAppLifecycleOwner
+import app.sadhan.ui.LocalToolVisible
+import androidx.compose.runtime.collectAsState
 import app.sadhan.ui.theme.Amber
 import kotlinx.coroutines.delay
 import kotlin.math.PI
@@ -54,7 +57,10 @@ import kotlin.math.sin
 fun TimerScreen() {
     val context = LocalContext.current
     val view = LocalView.current
-    val owner = LocalLifecycleOwner.current
+    val owner = LocalAppLifecycleOwner.current ?: LocalLifecycleOwner.current
+    val appState by owner.lifecycle.currentStateFlow.collectAsState()
+    val foreground = appState.isAtLeast(Lifecycle.State.RESUMED)
+    val visible = LocalToolVisible.current
     var duration by remember { mutableLongStateOf(300_000) }
     var remaining by remember { mutableLongStateOf(duration) }
     var deadline by remember { mutableLongStateOf(0) }
@@ -69,8 +75,8 @@ fun TimerScreen() {
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer); tone.value?.stop() }
     }
-    LaunchedEffect(running) {
-        while (running) {
+    LaunchedEffect(running, visible, foreground) {
+        while (running && foreground) {
             remaining = (deadline - SystemClock.elapsedRealtime()).coerceAtLeast(0)
             if (remaining == 0L) {
                 running = false
@@ -84,7 +90,7 @@ fun TimerScreen() {
                     } catch (e: SecurityException) { error = "Cannot play alarm: ${e.message}" }
                     view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 }
-            } else delay(40)
+            } else delay(if (visible) 40 else 250)
         }
     }
     LaunchedEffect(finished) { if (finished) { delay(10_000); tone.value?.stop() } }

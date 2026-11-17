@@ -1,3 +1,5 @@
+@file:androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+
 package app.sadhan
 
 import android.app.Activity
@@ -11,7 +13,8 @@ import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.view.View
 import android.view.ViewGroup
-import android.widget.VideoView
+import androidx.media3.ui.PlayerView
+import androidx.media3.common.C
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.core.content.FileProvider
@@ -54,8 +57,8 @@ class LocalMediaTest {
     }
 
     private fun chooseFile(tool: String, button: String, file: File) {
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(tool))
-        compose.onNodeWithText(tool).performClick()
+        compose.onNodeWithTag("tool-list").performScrollToNode(hasText(tool))
+        compose.onNode(hasText(tool) and hasAnyAncestor(hasTestTag("tool-list"))).performClick()
         val filter = IntentFilter(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             addDataType("*/*")
@@ -80,23 +83,29 @@ class LocalMediaTest {
         }.array()
         file.writeBytes(data)
         chooseFile("Music Player", "Choose audio", file)
-        compose.waitUntil(20_000) { compose.onAllNodesWithText("Play").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("Play").performClick()
-        compose.onNodeWithText("Pause").assertExists()
+        compose.waitUntil(20_000) { compose.onAllNodes(hasContentDescription("Play") and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithContentDescription("Play").performScrollTo().performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription("Pause").fetchSemanticsNodes().isNotEmpty() }
         compose.waitUntil(10_000) {
             compose.onAllNodesWithText("00:00:01 / 00:00:04").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("Pause").performClick()
-        compose.onNodeWithText("Play").assertExists()
+        compose.onNodeWithContentDescription("Pause").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Play").assertExists()
+        compose.onNodeWithText("Shuffle off").performScrollTo().performClick()
+        compose.onNodeWithText("Shuffle on").assertExists()
+        compose.onNodeWithText("Repeat: Off").performScrollTo().performClick()
+        compose.onNodeWithText("Repeat: All").assertExists()
+        compose.onNodeWithText("Repeat: All").performClick()
+        compose.onNodeWithText("Repeat: One").assertExists()
     }
 
     @Test fun videoPlaysChosenLocalFileAndReleasesOnExit() {
         val file = fixture("test-video.mp4")
         makeVideo(file)
         chooseFile("Video Player", "Choose video", file)
-        var video: VideoView? = null
-        fun find(view: View): VideoView? = when (view) {
-            is VideoView -> view
+        var video: PlayerView? = null
+        fun find(view: View): PlayerView? = when (view) {
+            is PlayerView -> view
             is ViewGroup -> (0 until view.childCount).firstNotNullOfOrNull { find(view.getChildAt(it)) }
             else -> null
         }
@@ -104,15 +113,34 @@ class LocalMediaTest {
             var playing = false
             scenario.onActivity { activity ->
                 video = find(activity.window.decorView)
-                playing = video?.isPlaying == true && (video?.duration ?: 0) > 0
+                playing = video?.player?.isPlaying == true && (video?.player?.duration ?: 0) > 0
             }
             playing
         }
         scenario.moveToState(Lifecycle.State.CREATED)
-        scenario.onActivity { assertFalse(requireNotNull(video).isPlaying) }
+        scenario.onActivity { assertFalse(requireNotNull(video?.player).isPlaying) }
         scenario.moveToState(Lifecycle.State.RESUMED)
-        compose.onNodeWithContentDescription("Back").performClick()
-        compose.runOnIdle { assertFalse(requireNotNull(video).isPlaying) }
+        compose.onNodeWithText("Playback options").performScrollTo().performClick()
+        compose.onNodeWithText("Fit").performClick()
+        compose.onNodeWithText("Zoom").performClick()
+        compose.onNodeWithText("Done").performClick()
+        val subtitle = fixture("test-captions.srt").apply { writeText("1\n00:00:00,000 --> 00:00:01,900\nSADHAN subtitle test\n") }
+        val filter = IntentFilter(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE); addDataType("*/*") }
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", subtitle)
+        val monitor = instrumentation.addMonitor(filter, Instrumentation.ActivityResult(Activity.RESULT_OK, Intent().setData(uri)), true)
+        try { compose.onNodeWithText("Load subtitle file").performScrollTo().performClick() }
+        finally { instrumentation.removeMonitor(monitor) }
+        compose.waitUntil(20_000) {
+            var found = false
+            scenario.onActivity { found = video?.player?.currentTracks?.groups?.any { it.type == C.TRACK_TYPE_TEXT } == true }
+            found
+        }
+        compose.onNodeWithText("Subtitles").performScrollTo().performClick()
+        compose.onNodeWithText("Off").performClick()
+        compose.onNodeWithText("Fullscreen").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Exit fullscreen").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Close Video Player tab").performClick()
+        compose.runOnIdle { assertNull(requireNotNull(video).player) }
     }
 
     private fun makeVideo(file: File) {

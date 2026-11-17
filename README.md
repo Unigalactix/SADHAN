@@ -4,7 +4,13 @@
 
 Every small task you reach for a different app to do, in one place — built the way a fine tool is built: nothing there for show, nothing watching you.
 
-> **v1.0.0:** 22 tools, a native Android app, and a signed APK distributed on
+![SADHAN v1.1 workspace design overview](docs/assets/sadhan-workspace-overview.png)
+
+*Owner-provided design reference. Actual screens and layouts adapt to your
+device; this illustration is not a device screenshot.*
+
+> **v1.1.0:** 27 tools, seven original retro games, session-only workspace tabs,
+> and a signed native Android APK distributed on
 > [Releases](https://github.com/Unigalactix/SADHAN/releases/latest).
 > The build specification and implementation notes live in [SPEC.md](SPEC.md).
 
@@ -25,10 +31,21 @@ download buttons.
 - **No ads.** Not one ad SDK.
 - **No tracking, no analytics.** No telemetry, no crash-reporting phoning home.
 - **No account and no server of ours.** There is nothing to sign up for.
-- **No history.** Every tool forgets everything the moment you leave it. The only thing the app remembers is your Settings choices.
+- **No saved history.** Open tool tabs live only in memory. Switch between them
+  without losing work; close a tab to erase it. No tabs, queues, game progress,
+  notes or browser history are restored after the app process ends. Only
+  Settings, including your chosen document-library folder, persist.
 - **No paywalls.** Everything is there from the first launch.
 
-## The toolbox (v1)
+## The toolbox
+
+Open up to six tool/game tabs. Music and timers can continue while you use other
+tabs in the foreground; hidden cameras, video and games pause. Tablets and
+foldables offer a companion-tool pane without putting controls across a
+separating hinge. Rotation/resizing keeps the active in-memory session.
+Choose **System** (default), **Light**, or **Dark** in Settings. Frosted light and
+navy glass surfaces use orange controls, cyan readouts and reduced-motion-aware
+transitions.
 
 **Everyday**
 - Calculator — full expression evaluator, session-only history
@@ -36,13 +53,17 @@ download buttons.
 - EMI Calculator — monthly EMI, total interest, total payable
 - Age & Dates — exact age, days between dates
 - Unit Converter — length, weight, temperature, data, area, speed
+- Percentage — percentage of amount, share, and percentage change
+- Discount & Tax — discount, savings, tax after discount, final price
 
 **Pocket**
 - QR Maker — text to QR, share or save
 - QR Scanner — camera decoding, copy or open the result
 - Text Tools — word/char counts, case changer, duplicate-line remover
-- Scratchpad — a note that erases itself when you leave
+- Scratchpad — a note that erases itself when its tab closes
 - Image Compressor — shrink a photo, see before/after sizes
+- Random Picker — list options, whole numbers, six-sided dice
+- Password Generator — secure on-device randomness, selectable character types
 
 **Time**
 - Stopwatch — with laps
@@ -53,24 +74,50 @@ download buttons.
 - Weather — Open-Meteo: no key, no account
 - Currency — Frankfurter rates for 15 major currencies
 - YouTube — **BETA** *(see below)*
+- Private Browser — **BETA**, HTTPS browsing with session-only private tabs
 
 **Sensors**
 - Flashlight, Compass, Bubble Level
 
 **Media**
-- Music Player — choose local audio, play/pause and seek
-- Video Player — local video with Android playback controls
-- PDF Reader — page navigation, pinch zoom and pan
+- Music Player — opt-in device library, multi-file queue, previous/next,
+  seek, speed, repeat all/one, and shuffle
+- Video Player — device library, audio/subtitle track selection, external
+  SRT/VTT/SSA/ASS/TTML subtitles, speed, fit/fill/zoom/ratios, volume, subtitle
+  size, fullscreen and queues (AndroidX Media3)
+- PDF Reader — page navigation, pinch zoom/pan, and a chosen-folder document
+  library; other document formats open in an installed viewer
+
+**Games — original, native, offline, no saved scores**
+- Snake — swipe/D-pad, adjustable speed
+- Solitaire — draw-one Klondike, foundations, tableau moves, undo
+- Chess — local two-player, legal moves, castling, en passant, promotion,
+  checkmate/stalemate and draw rules; no chess engine or online play
+- Pixel Runner — original jump-and-run with platforms, gaps, stars and lives
+- Lane Racer — three-lane 2D traffic dodging
+- Rhythm Tiles — timed taps with procedural piano tones
+- Block Drop — original 10 × 18 falling-block puzzle with rotation, row clears,
+  levels and a seven-piece bag
+
+No borrowed game characters, artwork, music, ROMs or branded game assets.
 
 **About developer** — Rajesh Kodaganti (Rugved), with links to
 [portfolio](https://rajeshkodaganti.com),
 [LinkedIn](https://www.linkedin.com/in/rajesh-kodaganti-323118215/) and
 [GitHub](https://github.com/Unigalactix). Available from Home and About.
 
-Local media uses the system file picker without storage permissions. Playback
-pauses in the background and stops when you leave the tool. There are no
-playlists, recent files or saved positions. PDF support is for local, seekable,
-non-password-protected files. Media codecs depend on Android/device support.
+Manual file picking still needs no media-library permission. Optional library
+scans use `READ_MEDIA_AUDIO`, `READ_MEDIA_VIDEO` and Android 14+ selected-video
+access; Android 10–12 uses `READ_EXTERNAL_STORAGE` (maxSdk 32). These were
+owner-approved additions. No unrestricted all-files access is requested.
+Documents use Android's folder picker; only the folder choice is saved as a
+Setting, not an index or recent-file list.
+
+Music pauses when the app is backgrounded or the phone is locked; video pauses
+when its tab is hidden. Closing a player tab releases playback and its queue.
+No foreground-service/notification permissions were added without approval.
+PDF support is for local, seekable, non-password-protected files. Media3 uses
+available device decoders; this is not a full VLC codec/DVD/network-feature clone.
 
 The timer is foreground-only, with an alarm tone and system haptic feedback;
 it does not schedule background alarms or notifications. Currency values are
@@ -82,6 +129,16 @@ USD-peg estimate because Frankfurter does not supply an AED rate.
 Features tagged **BETA** in the app are experimental and may be unstable — the tag means exactly that, so you always know which parts are still settling.
 
 - **YouTube (Beta)** — paste a link or search, and watch in a clean in-app player using YouTube's official embed. Playback can break when YouTube changes things; that's why it's beta.
+- Search results remain on YouTube's official mobile site. Selecting a video
+  opens its official privacy-enhanced embed with a visible selection and
+  return-to-results control. No search API key, scraping or stream extraction.
+- **Private Browser (Beta)** — up to eight private tabs inside its workspace
+  tab. SADHAN saves no browser history. Cookies, DOM/form storage, file/content
+  access, website camera/mic/location requests and downloads are disabled.
+  Web data is cleared when the browser tool tab closes. Incognito is not
+  anonymity: sites see your IP and can fingerprint you; Android/WebView can
+  retain operational data. This is not a forensic-safe browser. Some sites,
+  especially cookie-dependent logins, will not work.
 
 ## Updates — the AETHER method
 
@@ -96,6 +153,7 @@ Apart from the features you explicitly use, SADHAN makes only these requests:
 | Weather | Open-Meteo | The city name you typed |
 | Currency rates | Frankfurter | Nothing about you |
 | YouTube (Beta) | YouTube's official embed | Whatever YouTube's own player sends |
+| Private Browser (Beta) | Sites you open; DuckDuckGo for address-bar searches | The address/search you enter and normal website requests |
 | Update check | GitHub's release list for this repo | Nothing: it reads the newest release's number |
 
 Your calculations, notes, photos and QR content are processed on the phone.
@@ -126,10 +184,12 @@ The device tests need a connected Android 10+ device or emulator. Source is
 organized into per-tool screens with shared `core`, `data`, `media`, `ui/theme`
 and `update` packages; no database or tool persistence is used.
 
-The initial release was validated with 10 JVM tests, release lint, and eight
-device tests on Android 15/API 35. Device checks cover all tool routes, Internet
-gates, state erasure, Settings persistence, developer links and beta labels,
-QR export/decoding, PDF rendering, and local audio/video playback.
+The initial v1.0.0 release was validated with 10 JVM tests, release lint and
+eight Android 15/API 35 device tests. The v1.1 checks include 24 JVM rule tests,
+13 phone UI scenarios, 12 foldable UI scenarios and a closed/half-open/open
+posture-continuity test. They cover workspace tabs, themes, resize continuity,
+private browsing, media controls/subtitles, library scanning, and game/utility
+rules. The small-pane calculator keeps its display and main action pinned.
 Physical sensors, camera optics, and all device-specific codecs still need
 on-device evaluation; YouTube remains beta.
 
