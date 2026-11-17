@@ -88,16 +88,18 @@ class AdaptiveUiTest {
         val original = Regex("(?:Physical|Override) size: (\\d+x\\d+)").findAll(shell("wm size")).last().groupValues[1]
         open("Calculator")
         compose.onNodeWithText("Expression").performTextInput("44+55")
+        val hadCompanion = compose.onAllNodesWithText("COMPANION WORKSPACE").fetchSemanticsNodes().isNotEmpty()
+        val density = context.resources.displayMetrics.density
         var before: MainActivity? = null
         scenario.onActivity { before = it }
         try {
-            shell("wm size 1600x1400")
+            shell("wm size ${(800 * density).toInt()}x${(700 * density).toInt()}")
             compose.waitUntil(20_000) { compose.onAllNodesWithText("COMPANION WORKSPACE").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("44+55").assertExists()
             compose.onNodeWithText("Category").assertExists()
             scenario.onActivity { assertSame("Window resizing must not reset the active session", before, it) }
         } finally { shell("wm size $original") }
-        compose.waitUntil(20_000) { compose.onAllNodesWithText("COMPANION WORKSPACE").fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(20_000) { compose.onAllNodesWithText("COMPANION WORKSPACE").fetchSemanticsNodes().isNotEmpty() == hadCompanion }
         compose.onNodeWithText("44+55").assertExists()
     }
 

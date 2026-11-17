@@ -104,8 +104,9 @@ class QualityRegressionTest {
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         fun shell(command: String): String = ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).bufferedReader().use { it.readText() }
         val original = Regex("(?:Physical|Override) size: (\\d+x\\d+)").findAll(shell("wm size")).last().groupValues[1]
+        val density = ApplicationProvider.getApplicationContext<Context>().resources.displayMetrics.density
         try {
-            shell("wm size 1200x540")
+            shell("wm size ${(900 * density).toInt()}x${(400 * density).toInt()}")
             openCatalogTool(compose, "Lane Racer")
             compose.onNodeWithText("Start").assertIsDisplayed()
             compose.onNodeWithText("Left").assertIsDisplayed()
