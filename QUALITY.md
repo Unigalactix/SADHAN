@@ -158,6 +158,9 @@ memory across repeated workspace cycles; normally 48dp touch targets;
 - At font scale 2.0, `everyToolOpensAndInternetGatesWork` and
   `shortLandscapeGamesKeepBoardAndPrimaryControlsInThePane` returned
   `OK (2 tests)`. Short viewport: 1200 x 540 at density 210.
+  The checked-in viewport tests now express their targets as 800 x 700dp
+  (expanded) and 900 x 400dp (short landscape), and restore the original
+  companion state, rather than assuming every device has the phone's density.
 - Foldable runner: 17 cases returned `OK (17 tests)` on SadhanFold35,
   the official 7.6-inch foldable profile, Android 15/API 35, x86_64,
   1768 x 2208 at density 420, font 1.0. The activity and calculation survived
@@ -168,12 +171,50 @@ memory across repeated workspace cycles; normally 48dp touch targets;
 - Browser gallery validation: 1440/768/390/320 CSS-pixel viewports, all six
   gallery images loaded with alt text, no horizontal overflow, 34/7 catalog
   filtering and all three primary download links still targeting stable.
+- [Hosted quality run 44194057120](https://github.com/Unigalactix/SADHAN/actions/runs/44194057120)
+  passed both jobs: unit/lint/unsigned release build and API 35 device checks.
+  Its JUnit report records 19 cases, zero failures/errors and one expected
+  phone-only fold-posture skip (18 passed). The downloaded device artifact
+  contains all twelve required Light/Dark master-view PNGs. Missing captures
+  now fail CI; AGP retains the tested app only in the disposable emulator until
+  collection finishes. The hosted runner's action-runtime deprecation
+  annotations are maintenance warnings, not hidden test failures.
 
-The shared Windows host caused an initial Pixel Launcher boot ANR. It was
-identified as the launcher, dismissed explicitly, and affected screenshot
-attempts were discarded and recaptured. This is not recorded as an app pass
-or an app ANR. Keyboard tests put the native window into keyboard mode before
-requesting control focus, rather than relying on a previous test's input mode.
+On the shared Windows host, initial Pixel Launcher/System UI boot ANRs were
+identified explicitly; covered screenshots were discarded and recaptured.
+Later repeat debug-instrumentation startup attempts also hit real process
+startup ANRs during a roughly 250-second emulator boot, with about 350MB of
+free host RAM and failing emulator radio/Bluetooth services. Those failed
+attempts are not counted as passes or an ANR-free certification. No app
+timeout was relaxed to hide them. Keyboard tests put the native window into
+keyboard mode before requesting control focus, rather than relying on a
+previous test's input mode.
+
+### Signed installation and development diagnostics
+
+- `assembleRelease` succeeded. `apksigner verify --print-certs` matched the
+  permanent SADHAN certificate:
+  `d4c42eb688ed3de7f10aaf71226db155b34950c3762b7375dbbfbd13376ccf9e`.
+- Verified package `app.sadhan`, version `1.2.0-rc.1`, code 3, minSdk 29,
+  targetSdk 35 and the unchanged permission allowlist.
+- Installed the public v1.1.0 signed APK, selected Dark and disabled master
+  Internet, then installed the candidate in place. Both Settings survived.
+- Uninstalled and freshly installed the signed candidate. About's manual
+  online check displayed `You're up to date (v1.2.0-rc.1)`, without offering
+  the older stable release.
+- Final signed-install checks used the isolated API 35 phone with a host GPU,
+  540 x 1200 physical framebuffer and density 210; optional emulator-only
+  Wellbeing/System Intelligence packages were disabled. This is a different
+  diagnostic fixture from the software-rendered UI acceptance runs.
+- Three process-cold `am start -W` development samples were 2526, 2377 and
+  2383ms. One idle snapshot reported 30,797KB PSS and 157,912KB RSS.
+  This tiny, resource-constrained emulator sample does **not** establish p95,
+  a physical-device launch target, jank, battery, thermal or memory-leak
+  acceptance. Those gates remain open.
+
+The final release's APK checksum is recorded in its GitHub release notes,
+not embedded in this source ledger (packaged source-control metadata changes
+the APK checksum when the release commit changes).
 
 ## Remaining external approvals — not completed by automation
 

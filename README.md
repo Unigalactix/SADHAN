@@ -14,7 +14,7 @@ device; this illustration is not a device screenshot.*
 > [Releases](https://github.com/Unigalactix/SADHAN/releases/latest).
 > The build specification and implementation notes live in [SPEC.md](SPEC.md).
 
-**Quality candidate:** v1.2.0-rc.1 adds focused Tools/Media/Games navigation,
+**Quality candidate:** [v1.2.0-rc.1](https://github.com/Unigalactix/SADHAN/releases/tag/v1.2.0-rc.1) adds focused Tools/Media/Games navigation,
 confirmed workspace closes, progressive RAM-only libraries, playback and
 browser recovery fixes, localized number entry and adaptive game controls.
 It is a prerelease; v1.1.0 remains stable. The implementation and honest
@@ -201,6 +201,13 @@ and `update` packages; no database or tool persistence is used.
 test artifacts and preserves reports and actual emulator master-view captures.
 CI artifacts are not permanent signed releases. Release-candidate evidence and
 remaining physical-device/human checks are listed in [QUALITY.md](QUALITY.md).
+CI retains the test APK only inside its disposable emulator until all twelve
+master-view screenshots have been pulled; missing captures fail the job.
+[Verified candidate CI](https://github.com/Unigalactix/SADHAN/actions/runs/44194057120)
+includes downloadable reports and twelve actual screen captures. Local
+candidate checks cover 31 JVM rules, 18 phone cases, 17 foldable cases and two
+200%-font cases, plus signed fresh-install and Settings-preserving upgrade
+verification. These do not replace the physical-device/human gates.
 
 ### Reporting problems
 
