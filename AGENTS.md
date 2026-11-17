@@ -5,13 +5,21 @@ Instructions for any coding agent (or human) continuing this project. Read this 
 ## Project status
 
 - **Design: complete.** README + SPEC were finalized 2026-11-16.
-- **Code: not started.** No source files exist yet. Your job is to implement v1.0.0 exactly per `SPEC.md`.
+- **Code: implemented.** v1.0.0 includes the original 19 tools plus owner-requested
+  local music, video and PDF tools, developer page, MIT licensing and a GitHub
+  Pages landing page. Read `SPEC.md` for the documented implementation details.
 - **Repo:** `github.com/Unigalactix/SADHAN` (public). Owner: Rajesh Kodaganti (Unigalactix).
 - **Distribution:** signed APK attached to GitHub Releases. No Play Store.
 
 ## What SADHAN is
 
 An all-in-one daily toolbox for Android (Kotlin + Jetpack Compose): 19 small tools (calculator, tip/split, EMI, age/dates, unit converter, QR maker + scanner, text tools, self-erasing scratchpad, stopwatch, dial timer, world clock, weather, currency, flashlight, compass, level, image compressor), plus Settings and About. Built in the style of the AETHER music app: native, one design language, distributed as a signed APK via GitHub Releases with in-app update checks.
+
+Owner-approved additions bring the total to 22 tools: local music player,
+video player and PDF reader. There is also an About developer screen with
+portfolio/LinkedIn/GitHub links. The four supplied brand variants are used for
+the adaptive launcher, splash screen, themed icon and static website in `docs/`.
+GitHub Pages publishes `main` / `docs`; the code is MIT-licensed.
 
 ## Golden rules — do not break these
 
@@ -74,3 +82,6 @@ Widgets, notifications/reminders, cloud sync, accounts, saved notes/history of a
 - Commit messages: imperative, prefixed by area when useful (e.g. `tools: add QR scanner`, `updater: handle blocked installs`).
 - Keep `README.md` and `SPEC.md` truthful: if implementation diverges from SPEC, update SPEC in the same change and flag it.
 - When in doubt about scope, permissions, or the golden rules: stop and ask the owner rather than guessing.
+
+
+## Alawyas Commit and push to Unigalactix/SADHAN as Unigalactix github account.

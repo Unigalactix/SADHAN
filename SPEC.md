@@ -10,6 +10,9 @@ The complete blueprint for the first build. Written 2026-11-16. When the code la
 - **Platform:** Android 10+ (minSdk 29), targetSdk 35, compileSdk 35, portrait
 - **Stack:** Kotlin 2.0.21, AGP 8.7.3, Jetpack Compose (BOM 2024.12.01), navigation-compose, material-icons-extended, ZXing core 3.5.3, CameraX 1.4.1. **No other third-party SDKs** — networking via `HttpURLConnection`, JSON via `org.json` (built into Android).
 - **Distribution:** signed APK on GitHub Releases of this repo. Same signing key for every release so updates install in place.
+- **License:** MIT (owner-approved during implementation).
+- **Approved v1 additions:** local music player, local video player, PDF reader,
+  and an About developer page with portfolio, LinkedIn and GitHub links.
 
 ## 2. Non-negotiables
 
@@ -19,9 +22,14 @@ The complete blueprint for the first build. Written 2026-11-16. When the code la
 4. Features that are unstable ship with a visible **BETA** tag (card chip + in-screen banner).
 5. Permissions are minimal: `INTERNET`, `CAMERA`, `REQUEST_INSTALL_PACKAGES`. Camera feature declared not required.
 
+AndroidX Core also declares the app-local signature permission
+`app.sadhan.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` to protect its internal
+broadcast receivers on older Android versions. This grants no additional
+device capability and is not a user/runtime permission.
+
 ## 3. Design language
 
-Pure black background (#000000), white text, one amber accent (#FFB300), dark translucent cards, 20dp corners. Home = sectioned grid of tool cards: **Everyday / Pocket / Time / Internet / Sensors**. A reusable `BetaChip` composable (amber outline, "BETA") marks beta tools on their card and as a banner inside the screen.
+Pure black background (#000000), white text, one amber accent (#FFB300), dark translucent cards, 20dp corners. Home = sectioned grid of tool cards: **Everyday / Pocket / Time / Internet / Sensors / Media**. A reusable `BetaChip` composable (amber outline, "BETA") marks beta tools on their card and as a banner inside the screen.
 
 ## 4. Screens
 
@@ -37,17 +45,21 @@ Pure black background (#000000), white text, one amber accent (#FFB300), dark tr
 | 8 | Text Tools | Live word/char/line counts; UPPERCASE, lowercase, Title Case, dedupe lines, trim |
 | 9 | Scratchpad | State held only in the composable — leaving destroys it; labelled "erases itself when you leave" |
 | 10 | Stopwatch | Start/pause/reset + in-session laps |
-| 11 | Timer | Circular drag-to-set dial + presets (1/5/10/15/30/60); animated ring; alarm tone + vibration on finish |
+| 11 | Timer | Circular drag-to-set dial + presets (1/5/10/15/30/60); animated ring; foreground alarm tone + permission-free haptic feedback on finish (subject to system sound/haptic settings). No background alarm or VIBRATE permission. |
 | 12 | World Clock | Kolkata, Dubai, London, New York, Los Angeles, Singapore, Tokyo, Sydney, Berlin, Toronto (`java.time`) |
 | 13 | Weather | Open-Meteo geocoding + forecast (no key): current temp, condition from weather code, humidity/wind, 5-day min/max |
-| 14 | Currency | `api.frankfurter.app/latest` (no key); USD, EUR, GBP, INR, AED, JPY, AUD, CAD, SGD, CHF, CNY, NZD, ZAR, BRL, KRW; rates in memory only |
+| 14 | Currency | `api.frankfurter.app/latest` (no key); USD, EUR, GBP, INR, AED, JPY, AUD, CAD, SGD, CHF, CNY, NZD, ZAR, BRL, KRW; rates in memory only. Frankfurter does not supply AED: AED conversions are labelled indicative estimates at the fixed 3.6725 AED/USD peg. Rates include their reference date. |
 | 15 | YouTube **BETA** | BetaChip + banner "Beta — playback can be unstable. Uses YouTube's official embed." Paste link/ID → `youtube-nocookie.com/embed/<id>` in a WebView; search box → `m.youtube.com/results` in the same WebView; JS enabled on that WebView only |
 | 16 | Flashlight | `CameraManager` torch on the back camera with flash |
 | 17 | Compass | Rotation-vector sensor (fallback accel+magnetometer) → heading + rotating dial |
 | 18 | Level | Accelerometer → bubble offset + X/Y tilt degrees |
-| 19 | Image Compressor | Photo picker → original size, quality slider 10–100, JPEG compress, result size, Save to Pictures/SADHAN or Share |
+| 19 | Image Compressor | Photo picker → original size, quality slider 10–100, JPEG compress, result size, Save to Pictures/SADHAN or Share. Orientation is decoded by the platform; large images fit within 2048 × 2048, metadata is removed, transparency becomes black. |
 | 20 | Settings | Master Internet toggle; Weather / Currency / YouTube (Beta) / Update-check toggles (SharedPreferences) |
 | 21 | About | Version, "No ads. No tracking. No accounts. Nothing you type in a tool is saved.", Check-for-updates button, link to this repo |
+| 22 | Music Player | Android document picker + MediaPlayer, audio focus, play/pause/restart/seek. Local formats supported by the device; pauses in background, releases on leaving. No scanned library, playlists or history. |
+| 23 | Video Player | Android document picker + VideoView with native playback/seek controls. Pauses in background, releases on leaving; codec support depends on device. |
+| 24 | PDF Reader | Android document picker + PdfRenderer, page navigation and pinch zoom/pan. Local, seekable, non-password-protected PDFs; no copies, bookmarks or recents. |
+| 25 | About developer | Rajesh Kodaganti (Rugved), public GitHub bio, portfolio, LinkedIn and GitHub. Reachable from Home and About. |
 
 When a feature is off in Settings, its screen shows "Turned off in Settings" instead of loading.
 
@@ -65,7 +77,24 @@ When a feature is off in Settings, its screen shows "Turned off in Settings" ins
 
 ## 7. Project layout
 
-Single module (`app`), package `app.sadhan`: `MainActivity` + NavHost; one file per tool screen under `ui/tools/`; `UpdateChecker` under `update/`; `SettingsStore` under `data/`; theme under `ui/theme/`. `gradle.properties`: `-Xmx2g`, workers.max=2. Gradle wrapper 8.10.2 ships with the repo. `.gitignore`: `build/`, `.gradle/`, `local.properties`, `*.jks`, `keystore.properties`.
+Single Gradle module (`app`), internally modular by responsibility:
+`MainActivity` + NavHost; one file per tool under `ui/tools/`; shared UI and
+screen metadata under `ui/`; theme under `ui/theme/`; pure calculations,
+conversion, image export and HTTP under `core/`; preferences and network
+repositories under `data/`; local document handling under `media/`; version
+comparison, checks, download verification and install under `update/`.
+No tool state is shared across screen visits.
+
+In addition to the specified dependencies, AndroidX Core, Activity Compose
+and Lifecycle Runtime Compose provide FileProvider, file/permission activity
+contracts and lifecycle-safe cleanup. These are Android framework integration
+libraries, not telemetry SDKs. JUnit and AndroidX Compose test libraries are
+test-only. No additional media, PDF or networking SDKs are used.
+
+`gradle.properties`: `-Xmx2g`, workers.max=2. Gradle wrapper 8.10.2 ships with
+the repo. `.gitignore`: `build/`, `.gradle/`, `local.properties`, `*.jks`,
+`keystore.properties`. Exported images and downloaded APKs are explicit
+user actions; temporary sharing/update files use app cache, not tool history.
 
 ## 8. Release checklist (v1.0.0)
 
