@@ -1,0 +1,13 @@
+.gradle/
+.kotlin/
+**/build/
+local.properties
+*.jks
+*.keystore
+keystore.properties
+*.apk
+*.aab
+.idea/
+*.iml
+captures/
+.playwright-mcp/
